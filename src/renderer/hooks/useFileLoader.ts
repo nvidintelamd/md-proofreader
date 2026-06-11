@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
+import { parseMdToBlocks } from '../lib/mdParser'
 
 export function useFileLoader() {
   const {
@@ -12,15 +13,12 @@ export function useFileLoader() {
     const selectedFiles = await window.api.openFiles()
     if (selectedFiles.length === 0) return
 
-    // Get directory from first file
     const dir = selectedFiles[0].path.replace(/[/\\][^/\\]+$/, '')
     setMdDir(dir)
 
-    // Read proofread state
     const state = await window.api.readProofreadState(dir)
     setProofreadState(state || {})
 
-    // Build file list with done status
     const fileList = selectedFiles.map(f => ({
       name: f.name,
       path: f.path,
@@ -30,7 +28,6 @@ export function useFileLoader() {
     setCurrentFileIndex(0)
     setCursorBlock(0)
 
-    // Load first file
     if (fileList.length > 0) {
       await loadFileContent(fileList[0].path, dir)
     }
@@ -44,13 +41,10 @@ export function useFileLoader() {
     const lines = content.split('\n')
     setRawLines(lines)
 
-    // Dynamic import to avoid circular deps
-    const { parseMdToBlocks } = await import('../lib/mdParser')
     const blocks = parseMdToBlocks(content)
     setBlocks(blocks)
     setCursorBlock(0)
 
-    // Resolve images
     const dir = mdDir || useAppStore.getState().mdDir
     const imageRegex = /!\[.*?\]\((.*?)\)/g
     let match

@@ -1,7 +1,6 @@
 import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import { join } from 'path'
-import { readFile, writeFile, readdir, stat } from 'fs/promises'
-import { is } from '@electron-toolkit/utils'
+import { readFile, writeFile, stat } from 'fs/promises'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -19,7 +18,8 @@ function createWindow(): void {
     }
   })
 
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
+  // In dev mode, load from vite dev server
+  if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
