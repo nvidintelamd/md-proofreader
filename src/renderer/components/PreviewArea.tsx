@@ -19,7 +19,8 @@ export function PreviewArea() {
     const container = containerRef.current
     const blockElements = container.querySelectorAll('[data-block-index]')
 
-    for (const el of blockElements) {
+    for (let i = 0; i < blockElements.length; i++) {
+      const el = blockElements[i]
       const rect = el.getBoundingClientRect()
       const containerRect = container.getBoundingClientRect()
       if (rect.top >= containerRect.top && rect.top < containerRect.bottom) {

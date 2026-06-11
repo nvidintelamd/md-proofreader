@@ -26,7 +26,7 @@ export function useProofreadState() {
 
       // Load next file content directly
       const result = await window.api.readFile(newFiles[nextIndex].path)
-      if (result.success) {
+      if (result.success && result.content) {
         const lines = result.content.split('\n')
         setRawLines(lines)
         const blocks = parseMdToBlocks(result.content)

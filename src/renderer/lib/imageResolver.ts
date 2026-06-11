@@ -31,5 +31,5 @@ export function extractImagePaths(content: string): string[] {
   while ((match = regex.exec(content)) !== null) {
     if (match[1]) paths.push(match[1].trim())
   }
-  return [...new Set(paths)]
+  return Array.from(new Set(paths))
 }

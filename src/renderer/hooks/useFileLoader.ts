@@ -35,7 +35,7 @@ export function useFileLoader() {
 
   const loadFileContent = useCallback(async (filePath: string, mdDir?: string) => {
     const result = await window.api.readFile(filePath)
-    if (!result.success) return
+    if (!result.success || !result.content) return
 
     const content = result.content
     const lines = content.split('\n')
