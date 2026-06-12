@@ -1,33 +1,25 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
-import { parseMdToBlocks } from '../lib/mdParser'
 
 export function useEditMode() {
-  const {
-    editRange, mdDir, imageCache,
-    setMode, setEditRange, setBlocks, setRawLines, setCursorBlock, addImageToCache
-  } = useAppStore()
+  const editRange = useAppStore(s => s.editRange)
+  const mdDir = useAppStore(s => s.mdDir)
+  const imageCache = useAppStore(s => s.imageCache)
 
   const applyEdit = useCallback(async (newText: string) => {
     if (!editRange) return
 
-    const { blocks, rawLines } = useAppStore.getState()
-    const startLine = blocks[editRange.start].startLine
-    const endLine = blocks[editRange.end].endLine
+    const { lines, setLines, setCursorLine, setMode, setEditRange, addImageToCache } = useAppStore.getState()
 
     const newLines = newText.split('\n')
-    const before = rawLines.slice(0, startLine)
-    const after = rawLines.slice(endLine + 1)
-    const updatedRawLines = [...before, ...newLines, ...after]
+    const before = lines.slice(0, editRange.start)
+    const after = lines.slice(editRange.end + 1)
+    const updatedLines = [...before, ...newLines, ...after]
 
-    setRawLines(updatedRawLines)
+    setLines(updatedLines)
 
-    const newBlocks = parseMdToBlocks(updatedRawLines.join('\n'))
-    setBlocks(newBlocks)
-
-    // Reset cursor to safe position after re-parse
-    const safeCursor = Math.min(editRange.start, newBlocks.length - 1)
-    setCursorBlock(Math.max(0, safeCursor))
+    const safeCursor = Math.min(editRange.start, updatedLines.length - 1)
+    setCursorLine(Math.max(0, safeCursor))
     setMode('normal')
     setEditRange(null)
 
@@ -51,8 +43,8 @@ export function useEditMode() {
   }, [editRange, mdDir, imageCache])
 
   const cancelEdit = useCallback(() => {
-    setMode('normal')
-    setEditRange(null)
+    useAppStore.getState().setMode('normal')
+    useAppStore.getState().setEditRange(null)
   }, [])
 
   return { applyEdit, cancelEdit }

@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { useAppStore } from './store/appStore'
 import { useFileLoader } from './hooks/useFileLoader'
 import { useKeyboardNav } from './hooks/useKeyboardNav'
@@ -8,44 +8,27 @@ import { FileList } from './components/FileList'
 import { PreviewArea } from './components/PreviewArea'
 import { EditModal } from './components/EditModal'
 import { StatusBar } from './components/StatusBar'
-import { parseMdToBlocks } from './lib/mdParser'
 
 export default function App() {
   const {
-    files, currentFileIndex, mode, editRange, rawLines,
-    setBlocks, setCursorBlock, setMode, setEditRange
+    files, currentFileIndex, mode
   } = useAppStore()
 
   const { loadFiles, loadFileContent } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
   const { completeCurrentAndNext, isAllDone } = useProofreadState()
 
-  // Register keyboard navigation
   useKeyboardNav()
 
   const handleFileSelect = useCallback(async (index: number) => {
-    const { files, setCurrentFileIndex, setCursorBlock } = useAppStore.getState()
+    const { files, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
     setCurrentFileIndex(index)
-    setCursorBlock(0)
+    setCursorLine(0)
     await loadFileContent(files[index].path)
   }, [loadFileContent])
 
-  const handleCompleteAndNext = useCallback(async () => {
-    await completeCurrentAndNext()
-  }, [completeCurrentAndNext])
-
-  // Update blocks when rawLines change (after edit)
-  useEffect(() => {
-    if (rawLines.length > 0) {
-      const content = rawLines.join('\n')
-      const blocks = parseMdToBlocks(content)
-      setBlocks(blocks)
-    }
-  }, [rawLines])
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b px-4 py-2 flex items-center justify-between shadow-sm z-50">
         <div className="flex items-center space-x-4">
           <h1 className="text-lg font-bold text-indigo-600 flex items-center gap-2">
@@ -69,7 +52,7 @@ export default function App() {
           </button>
           {files.length > 0 && (
             <button
-              onClick={handleCompleteAndNext}
+              onClick={completeCurrentAndNext}
               disabled={isAllDone()}
               className={`px-3 py-1.5 rounded text-xs font-bold transition-colors ${
                 isAllDone()
@@ -83,7 +66,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
         <FileList onFileSelect={handleFileSelect} />
         <div className="flex-1 flex flex-col bg-white">
@@ -91,15 +73,10 @@ export default function App() {
         </div>
       </div>
 
-      {/* Status bar */}
       <StatusBar />
 
-      {/* Edit modal */}
-      {mode === 'edit_modal' && editRange && (
-        <EditModal
-          onSave={applyEdit}
-          onCancel={cancelEdit}
-        />
+      {mode === 'edit_modal' && (
+        <EditModal onSave={applyEdit} onCancel={cancelEdit} />
       )}
     </div>
   )

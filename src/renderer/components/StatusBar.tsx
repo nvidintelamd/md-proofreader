@@ -2,7 +2,12 @@ import React from 'react'
 import { useAppStore } from '../store/appStore'
 
 export function StatusBar() {
-  const { files, currentFileIndex, cursorBlock, blocks, mode, editRange } = useAppStore()
+  const files = useAppStore(s => s.files)
+  const currentFileIndex = useAppStore(s => s.currentFileIndex)
+  const cursorLine = useAppStore(s => s.cursorLine)
+  const lines = useAppStore(s => s.lines)
+  const mode = useAppStore(s => s.mode)
+  const editRange = useAppStore(s => s.editRange)
 
   const currentFile = files[currentFileIndex]
   const progress = files.length > 0
@@ -16,9 +21,9 @@ export function StatusBar() {
   }[mode]
 
   const modeColor = {
-    normal: 'bg-gray-100 text-gray-600',
-    edit_select: 'bg-yellow-100 text-yellow-700',
-    edit_modal: 'bg-blue-100 text-blue-700'
+    normal: 'bg-gray-700 text-gray-300',
+    edit_select: 'bg-yellow-800 text-yellow-200',
+    edit_modal: 'bg-blue-800 text-blue-200'
   }[mode]
 
   return (
@@ -38,9 +43,9 @@ export function StatusBar() {
       <div className="h-3 w-px bg-gray-600" />
 
       <div className="flex items-center gap-2">
-        <span className="text-gray-500">块:</span>
+        <span className="text-gray-500">行:</span>
         <span className="text-gray-200">
-          {blocks.length > 0 ? `${cursorBlock + 1}/${blocks.length}` : '-'}
+          {lines.length > 0 ? `${cursorLine + 1}/${lines.length}` : '-'}
         </span>
       </div>
 
@@ -60,7 +65,7 @@ export function StatusBar() {
 
       <div className="text-gray-500">
         {mode === 'normal' && 'hjkl 移动 | v 选择 | PgUp/PgDn 翻页'}
-        {mode === 'edit_select' && 'jk 扩展选区 | Enter 编辑 | Esc 取消'}
+        {mode === 'edit_select' && '点击结束行 | Esc 取消'}
         {mode === 'edit_modal' && '编辑中 | Esc 取消 | Ctrl+S 保存'}
       </div>
     </div>
