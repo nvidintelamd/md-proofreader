@@ -138,15 +138,16 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
         const isEdited = editedRange != null && idx >= editedRange.start && idx <= editedRange.end
 
         let bgClass = ''
-        if (isEdited && !isSelected) bgClass = 'bg-purple-100'
-        if (isSelected) bgClass = 'bg-yellow-200'
-        if (isCursor && !isSelected) bgClass = 'bg-blue-100'
+        if (isEdited && !isSelected) bgClass = 'bg-purple-100 hover:bg-purple-200'
+        if (isSelected) bgClass = 'bg-yellow-200 hover:bg-yellow-200'
+        if (isCursor && !isSelected) bgClass = 'bg-blue-100 hover:bg-blue-200'
+        if (!isSelected && !isCursor && !isEdited) bgClass = 'hover:bg-gray-50'
 
         return (
           <div
             key={`${currentFileIndex}-${idx}`}
             data-line-index={idx}
-            className={`flex items-start cursor-pointer ${isDragging || isSelected ? '' : 'transition-colors duration-50 hover:bg-gray-50'} ${bgClass}`}
+            className={`flex items-start cursor-pointer transition-colors duration-50 ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
             onMouseMove={() => handleMouseMove(idx)}
           >
