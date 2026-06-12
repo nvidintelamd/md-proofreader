@@ -8,6 +8,7 @@ import { FileList } from './components/FileList'
 import { PreviewArea } from './components/PreviewArea'
 import { EditModal } from './components/EditModal'
 import { StatusBar } from './components/StatusBar'
+import { ErrorBoundary } from './components/ErrorBoundary'
 
 export default function App() {
   const {
@@ -24,7 +25,11 @@ export default function App() {
     const { files, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
     setCurrentFileIndex(index)
     setCursorLine(0)
-    await loadFileContent(files[index].path)
+    try {
+      await loadFileContent(files[index].path)
+    } catch (err) {
+      console.error('Failed to load file:', err)
+    }
   }, [loadFileContent])
 
   return (
@@ -69,7 +74,9 @@ export default function App() {
       <div className="flex-1 flex overflow-hidden">
         <FileList onFileSelect={handleFileSelect} />
         <div className="flex-1 flex flex-col bg-white">
-          <PreviewArea />
+          <ErrorBoundary>
+            <PreviewArea />
+          </ErrorBoundary>
         </div>
       </div>
 

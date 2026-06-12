@@ -3,12 +3,22 @@ import { useAppStore } from '../store/appStore'
 import { renderMathInElement, renderMathString } from '../lib/katexSetup'
 
 export function PreviewArea() {
-  const {
-    lines, cursorLine, mode, editRange, imageCache, mdDir
-  } = useAppStore()
+  const lines = useAppStore(s => s.lines)
+  const cursorLine = useAppStore(s => s.cursorLine)
+  const mode = useAppStore(s => s.mode)
+  const editRange = useAppStore(s => s.editRange)
+  const imageCache = useAppStore(s => s.imageCache)
+  const mdDir = useAppStore(s => s.mdDir)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Pre-compute math blocks and HTML table lines
+  // Clamp cursor when lines change
+  useEffect(() => {
+    const { cursorLine, setCursorLine } = useAppStore.getState()
+    if (lines.length > 0 && cursorLine >= lines.length) {
+      setCursorLine(lines.length - 1)
+    }
+  }, [lines.length])
+
   const mathBlocks = useMemo(() => {
     const blocks: { start: number; end: number }[] = []
     let mathStart = -1
@@ -25,7 +35,11 @@ export function PreviewArea() {
 
   useEffect(() => {
     if (containerRef.current) {
-      renderMathInElement(containerRef.current)
+      try {
+        renderMathInElement(containerRef.current)
+      } catch (err) {
+        console.warn('KaTeX render error:', err)
+      }
     }
   }, [lines, cursorLine])
 
@@ -33,14 +47,14 @@ export function PreviewArea() {
     if (!containerRef.current || mode !== 'normal') return
     const container = containerRef.current
     const lineEls = container.querySelectorAll('[data-line-index]')
+    const containerRect = container.getBoundingClientRect()
 
     for (let i = 0; i < lineEls.length; i++) {
-      const el = lineEls[i]
+      const el = lineEls[i] as HTMLElement
       const rect = el.getBoundingClientRect()
-      const containerRect = container.getBoundingClientRect()
       if (rect.top >= containerRect.top && rect.top < containerRect.bottom) {
         const idx = parseInt(el.getAttribute('data-line-index') || '0')
-        useAppStore.getState().setCursorLine(idx)
+        if (!isNaN(idx)) useAppStore.getState().setCursorLine(idx)
         break
       }
     }
@@ -81,7 +95,7 @@ export function PreviewArea() {
 
       {lines.map((line, idx) => {
         const isCursor = idx === cursorLine
-        const isInEditRange = editRange && idx >= editRange.start && idx <= editRange.end
+        const isInEditRange = editRange != null && idx >= editRange.start && idx <= editRange.end
 
         return (
           <div
@@ -98,7 +112,7 @@ export function PreviewArea() {
               {idx + 1}
             </span>
             <span className="flex-grow whitespace-pre-wrap break-all py-0.5 pr-4 min-h-[1.25rem]">
-              <LineContent
+              <SafeLineContent
                 line={line}
                 lineIndex={idx}
                 mathBlocks={mathBlocks}
@@ -113,6 +127,20 @@ export function PreviewArea() {
   )
 }
 
+function SafeLineContent(props: {
+  line: string
+  lineIndex: number
+  mathBlocks: { start: number; end: number }[]
+  imageCache: Map<string, string>
+  mdDir: string
+}) {
+  try {
+    return <LineContent {...props} />
+  } catch (err) {
+    return <span className="text-red-400 text-xs">[渲染错误]</span>
+  }
+}
+
 function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
   line: string
   lineIndex: number
@@ -120,7 +148,6 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
   imageCache: Map<string, string>
   mdDir: string
 }) {
-  // Check if in math block
   const mathBlock = mathBlocks.find(b => lineIndex >= b.start && lineIndex <= b.end)
   if (mathBlock) {
     if (lineIndex === mathBlock.start || lineIndex === mathBlock.end) {
@@ -134,7 +161,6 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
     )
   }
 
-  // Check for inline images
   const imgRegex = /!\[.*?\]\((.*?)\)/g
   const parts: React.ReactNode[] = []
   let lastIdx = 0
@@ -162,12 +188,10 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 
   const remaining = line.substring(lastIdx)
 
-  // Check for HTML table content
   if (remaining.includes('<table') || remaining.includes('<tr') || remaining.includes('<td')) {
     return <div dangerouslySetInnerHTML={{ __html: remaining }} />
   }
 
-  // Check for heading
   const hMatch = remaining.match(/^(#+)\s(.*)/)
   if (hMatch) {
     return (
@@ -189,7 +213,6 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 function renderStyledText(text: string, key: number): React.ReactNode {
   if (!text) return null
 
-  // Handle bold **text**
   const parts: React.ReactNode[] = []
   const boldRegex = /\*\*(.*?)\*\*/g
   let match
