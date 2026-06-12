@@ -4,6 +4,8 @@ const api = {
   openFiles: () => ipcRenderer.invoke('dialog:openFiles'),
   readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
   writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
+  saveImage: (mdDir: string, fileName: string, base64Data: string) =>
+    ipcRenderer.invoke('fs:saveImage', mdDir, fileName, base64Data),
   readImage: (mdDir: string, imagePath: string) =>
     ipcRenderer.invoke('fs:readImage', mdDir, imagePath),
 

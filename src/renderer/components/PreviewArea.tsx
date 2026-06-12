@@ -7,9 +7,13 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
   const cursorLine = useAppStore(s => s.cursorLine)
   const mode = useAppStore(s => s.mode)
   const editRange = useAppStore(s => s.editRange)
+  const editedRange = useAppStore(s => s.editedRange)
   const imageCache = useAppStore(s => s.imageCache)
   const mdDir = useAppStore(s => s.mdDir)
   const currentFileIndex = useAppStore(s => s.currentFileIndex)
+  const isDragging = useAppStore(s => s.isDragging)
+  const dragStart = useAppStore(s => s.dragStart)
+  const dragEnd = useAppStore(s => s.dragEnd)
   const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -50,18 +54,59 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     }
   }, [mode])
 
-  const handleLineClick = useCallback((index: number) => {
+  // Mouse drag selection
+  const handleMouseDown = useCallback((idx: number, e: React.MouseEvent) => {
+    if (e.button !== 0) return
     const state = useAppStore.getState()
-    if (state.mode === 'normal') {
-      state.setCursorLine(index)
-    } else if (state.mode === 'edit_select' && state.editRange) {
-      const start = Math.min(state.editRange.start, index)
-      const end = Math.max(state.editRange.start, index)
-      state.setEditRange({ start, end })
-      state.setCursorLine(index)
+    if (state.mode === 'edit_modal') return
+    state.startDrag(idx)
+    state.setCursorLine(idx)
+  }, [])
+
+  const handleMouseMove = useCallback((idx: number) => {
+    const state = useAppStore.getState()
+    if (state.isDragging) {
+      state.updateDrag(idx)
+
+      // Auto-scroll when near edges
+      const container = containerRef.current
+      if (container) {
+        const el = container.querySelector(`[data-line-index="${idx}"]`)
+        if (el) {
+          const rect = el.getBoundingClientRect()
+          const cRect = container.getBoundingClientRect()
+          if (rect.bottom > cRect.bottom - 40) {
+            container.scrollTop += 20
+          } else if (rect.top < cRect.top + 40) {
+            container.scrollTop -= 20
+          }
+        }
+      }
+    }
+  }, [])
+
+  const handleMouseUp = useCallback(() => {
+    const state = useAppStore.getState()
+    if (state.isDragging) {
+      state.endDrag()
+    }
+  }, [])
+
+  // Double-click to edit
+  const handleDoubleClick = useCallback(() => {
+    const state = useAppStore.getState()
+    if (state.editRange) {
       state.setMode('edit_modal')
     }
   }, [])
+
+  // Compute visual selection range (drag or editRange)
+  const visualRange = useMemo(() => {
+    if (isDragging && dragStart !== null && dragEnd !== null) {
+      return { start: Math.min(dragStart, dragEnd), end: Math.max(dragStart, dragEnd) }
+    }
+    return editRange
+  }, [isDragging, dragStart, dragEnd, editRange])
 
   if (lines.length === 0) {
     return <WelcomePage onOpenFiles={onOpenFiles} />
@@ -72,6 +117,8 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
       ref={containerRef}
       className="flex-1 overflow-y-auto select-none"
       onScroll={handleScroll}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       {mode === 'edit_select' && (
         <div className="sticky top-0 z-10 bg-yellow-100 text-yellow-800 text-xs text-center py-1">
@@ -81,18 +128,22 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
 
       {lines.map((line, idx) => {
         const isCursor = idx === cursorLine
-        const isInEditRange = editRange != null && idx >= editRange.start && idx <= editRange.end
+        const isSelected = visualRange != null && idx >= visualRange.start && idx <= visualRange.end
+        const isEdited = editedRange != null && idx >= editedRange.start && idx <= editedRange.end
+
+        let bgClass = ''
+        if (isEdited && !isSelected) bgClass = 'bg-purple-100'
+        if (isSelected) bgClass = 'bg-yellow-200'
+        if (isCursor && !isSelected) bgClass = 'bg-blue-100'
 
         return (
           <div
             key={`${currentFileIndex}-${idx}`}
             data-line-index={idx}
-            className={`flex items-start cursor-pointer transition-colors duration-50 ${
-              isCursor ? 'bg-blue-100' : ''
-            } ${isInEditRange && !isCursor ? 'bg-yellow-50' : ''} ${
-              !isCursor && !isInEditRange ? 'hover:bg-gray-50' : ''
-            }`}
-            onClick={() => handleLineClick(idx)}
+            className={`flex items-start cursor-pointer transition-colors duration-50 hover:bg-gray-50 ${bgClass}`}
+            onMouseDown={(e) => handleMouseDown(idx, e)}
+            onMouseMove={() => handleMouseMove(idx)}
+            onDoubleClick={handleDoubleClick}
           >
             <span className="flex-shrink-0 w-12 text-right pr-2 text-[10px] text-gray-400 select-none py-0.5" style={{ marginTop: '2px' }}>
               {idx + 1}
@@ -166,12 +217,10 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
     )
   }
 
-  // Check for HTML table — render with LaTeX processing in cells
   if (line.includes('<table') || line.includes('<tr') || line.includes('<td') || line.includes('</table>')) {
     return <div dangerouslySetInnerHTML={{ __html: renderTableWithMath(line, imageCache, mdDir) }} />
   }
 
-  // Split by inline images
   const imgRegex = /!\[.*?\]\((.*?)\)/g
   const parts: React.ReactNode[] = []
   let lastIdx = 0
@@ -219,17 +268,13 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 }
 
 function renderTableWithMath(html: string, imageCache: Map<string, string>, mdDir: string): string {
-  // Replace <img src="..."> with cached image URLs
   let result = html.replace(/<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi, (match, src) => {
     const cacheKey = `${mdDir}::${src}`
     const cachedUrl = imageCache.get(cacheKey)
-    if (cachedUrl) {
-      return match.replace(src, cachedUrl)
-    }
+    if (cachedUrl) return match.replace(src, cachedUrl)
     return match
   })
 
-  // Process table cells for LaTeX: replace $...$ and $$...$$ inside <td>...</td> and <th>...</th>
   result = result.replace(/(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/g, (_match, openTag, content, closeTag) => {
     const processed = content
       .replace(/\$\$([\s\S]*?)\$\$/g, (_m: string, math: string) => renderMathString(math.trim(), true))
@@ -248,7 +293,6 @@ function renderTextSegment(text: string): string {
     .replace(/>/g, '&gt;')
 
   result = result.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
-
   result = result.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
     return renderMathString(math, false)
   })

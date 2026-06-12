@@ -9,7 +9,10 @@ export function useEditMode() {
   const applyEdit = useCallback(async (newText: string) => {
     if (!editRange) return
 
-    const { lines, setLines, setCursorLine, setMode, setEditRange, addImageToCache } = useAppStore.getState()
+    const { lines, setLines, setCursorLine, setMode, setEditRange, addImageToCache, pushUndo, setEditedRange } = useAppStore.getState()
+
+    // Push undo before modifying
+    pushUndo({ lines: [...lines], range: editRange })
 
     // Convert literal \n to real newlines, then split
     const processedText = newText.replace(/\\n/g, '\n')
@@ -19,6 +22,7 @@ export function useEditMode() {
     const updatedLines = [...before, ...newLines, ...after]
 
     setLines(updatedLines)
+    setEditedRange({ start: editRange.start, end: editRange.start + newLines.length - 1 })
 
     const safeCursor = Math.min(editRange.start, updatedLines.length - 1)
     setCursorLine(Math.max(0, safeCursor))

@@ -8,6 +8,11 @@ export interface FileItem {
 
 export type Mode = 'normal' | 'edit_select' | 'edit_modal'
 
+export interface UndoEntry {
+  lines: string[]
+  range: { start: number; end: number }
+}
+
 interface AppState {
   files: FileItem[]
   currentFileIndex: number
@@ -19,6 +24,17 @@ interface AppState {
   imageCache: Map<string, string>
   sidebarVisible: boolean
 
+  // Drag selection
+  dragStart: number | null
+  dragEnd: number | null
+  isDragging: boolean
+
+  // Undo
+  undoStack: UndoEntry[]
+
+  // Edited line range (for purple highlight)
+  editedRange: { start: number; end: number } | null
+
   setFiles: (files: FileItem[]) => void
   setCurrentFileIndex: (index: number) => void
   setMdDir: (dir: string) => void
@@ -29,6 +45,19 @@ interface AppState {
   addImageToCache: (key: string, url: string) => void
   markFileDoneLocal: (index: number) => void
   toggleSidebar: () => void
+
+  // Drag
+  startDrag: (index: number) => void
+  updateDrag: (index: number) => void
+  endDrag: () => void
+
+  // Undo
+  pushUndo: (entry: UndoEntry) => void
+  undo: () => void
+  clearUndo: () => void
+
+  // Edited range
+  setEditedRange: (range: { start: number; end: number } | null) => void
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -41,6 +70,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   editRange: null,
   imageCache: new Map(),
   sidebarVisible: true,
+
+  dragStart: null,
+  dragEnd: null,
+  isDragging: false,
+
+  undoStack: [],
+
+  editedRange: null,
 
   setFiles: (files) => set({ files }),
   setCurrentFileIndex: (index) => set({ currentFileIndex: index }),
@@ -66,5 +103,41 @@ export const useAppStore = create<AppState>((set, get) => ({
       set({ files: newFiles })
     }
   },
-  toggleSidebar: () => set({ sidebarVisible: !get().sidebarVisible })
+  toggleSidebar: () => set({ sidebarVisible: !get().sidebarVisible }),
+
+  startDrag: (index) => set({ dragStart: index, dragEnd: index, isDragging: true }),
+  updateDrag: (index) => {
+    if (get().isDragging) set({ dragEnd: index })
+  },
+  endDrag: () => {
+    const { dragStart, dragEnd } = get()
+    if (dragStart !== null && dragEnd !== null) {
+      const start = Math.min(dragStart, dragEnd)
+      const end = Math.max(dragStart, dragEnd)
+      set({
+        editRange: { start, end },
+        cursorLine: end,
+        isDragging: false,
+        dragStart: null,
+        dragEnd: null
+      })
+    } else {
+      set({ isDragging: false, dragStart: null, dragEnd: null })
+    }
+  },
+
+  pushUndo: (entry) => set({ undoStack: [...get().undoStack, entry] }),
+  undo: () => {
+    const { undoStack, setLines, setEditRange, setEditedRange, setCursorLine } = get()
+    if (undoStack.length === 0) return
+    const entry = undoStack[undoStack.length - 1]
+    set({ undoStack: undoStack.slice(0, -1) })
+    setLines(entry.lines)
+    setEditedRange(entry.range)
+    setCursorLine(entry.range.start)
+    setEditRange(null)
+  },
+  clearUndo: () => set({ undoStack: [] }),
+
+  setEditedRange: (range) => set({ editedRange: range })
 }))

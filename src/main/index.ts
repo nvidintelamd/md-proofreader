@@ -96,6 +96,19 @@ ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string)
   }
 })
 
+ipcMain.handle('fs:saveImage', async (_event, mdDir: string, fileName: string, base64Data: string) => {
+  try {
+    const imagesDir = join(mdDir, 'images')
+    await mkdir(imagesDir, { recursive: true })
+    const filePath = join(imagesDir, fileName)
+    const buffer = Buffer.from(base64Data, 'base64')
+    await writeFile(filePath, buffer)
+    return { success: true, path: filePath }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+})
+
 ipcMain.handle('fs:readImage', async (_event, mdDir: string, imagePath: string) => {
   try {
     const fullPath = join(mdDir, imagePath.replace(/^\//, ''))

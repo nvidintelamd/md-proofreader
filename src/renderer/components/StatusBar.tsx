@@ -64,7 +64,7 @@ export function StatusBar() {
       <div className="flex-1" />
 
       <div className="text-gray-500">
-        {mode === 'normal' && 'hjkl 移动 | v 选择 | PgUp/PgDn 翻页'}
+        {mode === 'normal' && '拖拽选择 | 双击/v编辑 | Ctrl+V粘贴 | Ctrl+Z撤销'}
         {mode === 'edit_select' && '点击结束行 | Esc 取消'}
         {mode === 'edit_modal' && '编辑中 | Esc 取消 | Ctrl+S 保存'}
       </div>
