@@ -48,7 +48,7 @@ export function RegexPanel() {
   }
 
   return (
-    <div className="fixed inset-0 z-[9999]" onMouseDown={(e) => e.preventDefault()}>
+    <div className="fixed inset-0 z-[9999]">
       {/* Backdrop — does NOT close the panel */}
       <div className="absolute inset-0 bg-black/20" />
 
