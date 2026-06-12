@@ -11,7 +11,9 @@ export function useEditMode() {
 
     const { lines, setLines, setCursorLine, setMode, setEditRange, addImageToCache } = useAppStore.getState()
 
-    const newLines = newText.split('\n')
+    // Convert literal \n to real newlines, then split
+    const processedText = newText.replace(/\\n/g, '\n')
+    const newLines = processedText.split('\n')
     const before = lines.slice(0, editRange.start)
     const after = lines.slice(editRange.end + 1)
     const updatedLines = [...before, ...newLines, ...after]
@@ -26,7 +28,7 @@ export function useEditMode() {
     // Resolve any new images
     const imageRegex = /!\[.*?\]\((.*?)\)/g
     let match
-    while ((match = imageRegex.exec(newText)) !== null) {
+    while ((match = imageRegex.exec(processedText)) !== null) {
       const imgPath = match[1].trim()
       if (imgPath) {
         const cacheKey = `${mdDir}::${imgPath}`
