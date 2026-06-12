@@ -6,58 +6,108 @@ export function useFileLoader() {
     const selectedFiles = await window.api.openFiles()
     if (selectedFiles.length === 0) return
 
-    const dir = selectedFiles[0].path.replace(/[/\\][^/\\]+$/, '')
-    const { setMdDir, setProofreadState, setFiles, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
-
-    setMdDir(dir)
-
-    const state = await window.api.readProofreadState(dir)
-    setProofreadState(state || {})
+    // Load existing session to get proofread status
+    const session = await window.api.loadSession()
+    const status = session.proofreadStatus || {}
 
     const fileList = selectedFiles.map(f => ({
       name: f.name,
       path: f.path,
-      done: state?.[f.path] === true
+      done: status[f.path] === true
     }))
+
+    // Determine mdDir from first file
+    const dir = selectedFiles[0].path.replace(/[/\\][^/\\]+$/, '')
+
+    const { setMdDir, setFiles, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
+    setMdDir(dir)
     setFiles(fileList)
     setCurrentFileIndex(0)
     setCursorLine(0)
 
-    if (fileList.length > 0) {
-      await loadFileContent(fileList[0].path, dir)
-    }
+    // Save session
+    await window.api.saveSession({
+      filePaths: selectedFiles.map(f => f.path),
+      proofreadStatus: status
+    })
+
+    // Load first file
+    await loadFileContent(fileList[0].path, dir)
   }, [])
 
-  const loadFileContent = useCallback(async (filePath: string, mdDir?: string) => {
-    const result = await window.api.readFile(filePath)
-    if (!result.success || !result.content) return
+  const loadLastSession = useCallback(async () => {
+    const session = await window.api.loadSession()
+    if (!session.filePaths || session.filePaths.length === 0) return false
 
-    const { setLines, setCursorLine, addImageToCache } = useAppStore.getState()
-    const lines = result.content.split('\n')
-    setLines(lines)
-    setCursorLine(0)
+    const status = session.proofreadStatus || {}
 
-    const dir = mdDir || useAppStore.getState().mdDir
-
-    // Extract images from markdown syntax ![](path)
-    const mdImgRegex = /!\[.*?\]\((.*?)\)/g
-    let match
-    while ((match = mdImgRegex.exec(result.content)) !== null) {
-      const imgPath = match[1].trim()
-      if (imgPath) resolveImagePath(dir, imgPath, addImageToCache)
-    }
-
-    // Extract images from HTML <img src="path"> tags
-    const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
-    while ((match = htmlImgRegex.exec(result.content)) !== null) {
-      const imgPath = match[1].trim()
-      if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('data:')) {
-        resolveImagePath(dir, imgPath, addImageToCache)
+    // Verify files still exist and build file list
+    const fileList: { name: string; path: string; done: boolean }[] = []
+    for (const filePath of session.filePaths) {
+      const result = await window.api.readFile(filePath)
+      if (result.success) {
+        fileList.push({
+          name: filePath.split(/[/\\]/).pop() || '',
+          path: filePath,
+          done: status[filePath] === true
+        })
       }
     }
+
+    if (fileList.length === 0) return false
+
+    const dir = fileList[0].path.replace(/[/\\][^/\\]+$/, '')
+    const { setMdDir, setFiles, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
+    setMdDir(dir)
+    setFiles(fileList)
+    setCursorLine(0)
+
+    // Jump to first unfinished file
+    const firstUnfinished = fileList.findIndex(f => !f.done)
+    const targetIndex = firstUnfinished !== -1 ? firstUnfinished : 0
+    setCurrentFileIndex(targetIndex)
+
+    await loadFileContent(fileList[targetIndex].path, dir)
+
+    // Update session with surviving files
+    await window.api.saveSession({
+      filePaths: fileList.map(f => f.path),
+      proofreadStatus: status
+    })
+
+    return true
   }, [])
 
-  return { loadFiles, loadFileContent }
+  return { loadFiles, loadFileContent, loadLastSession }
+}
+
+export async function loadFileContent(filePath: string, mdDir?: string) {
+  const result = await window.api.readFile(filePath)
+  if (!result.success || !result.content) return
+
+  const { setLines, setCursorLine, addImageToCache } = useAppStore.getState()
+  const lines = result.content.split('\n')
+  setLines(lines)
+  setCursorLine(0)
+
+  const dir = mdDir || useAppStore.getState().mdDir
+
+  // Extract markdown images
+  const mdImgRegex = /!\[.*?\]\((.*?)\)/g
+  let match
+  while ((match = mdImgRegex.exec(result.content)) !== null) {
+    const imgPath = match[1].trim()
+    if (imgPath) resolveImagePath(dir, imgPath, addImageToCache)
+  }
+
+  // Extract HTML images
+  const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
+  while ((match = htmlImgRegex.exec(result.content)) !== null) {
+    const imgPath = match[1].trim()
+    if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('data:')) {
+      resolveImagePath(dir, imgPath, addImageToCache)
+    }
+  }
 }
 
 async function resolveImagePath(

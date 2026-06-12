@@ -17,7 +17,6 @@ interface AppState {
   mode: Mode
   editRange: { start: number; end: number } | null
   imageCache: Map<string, string>
-  proofreadState: Record<string, boolean>
   sidebarVisible: boolean
 
   setFiles: (files: FileItem[]) => void
@@ -28,8 +27,7 @@ interface AppState {
   setMode: (mode: Mode) => void
   setEditRange: (range: { start: number; end: number } | null) => void
   addImageToCache: (key: string, url: string) => void
-  setProofreadState: (state: Record<string, boolean>) => void
-  markFileDone: (index: number) => void
+  markFileDoneLocal: (index: number) => void
   toggleSidebar: () => void
 }
 
@@ -42,7 +40,6 @@ export const useAppStore = create<AppState>((set, get) => ({
   mode: 'normal',
   editRange: null,
   imageCache: new Map(),
-  proofreadState: {},
   sidebarVisible: true,
 
   setFiles: (files) => set({ files }),
@@ -61,14 +58,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     cache.set(key, url)
     set({ imageCache: cache })
   },
-  setProofreadState: (state) => set({ proofreadState: state }),
-  markFileDone: (index) => {
-    const { files, proofreadState } = get()
+  markFileDoneLocal: (index) => {
+    const { files } = get()
     const newFiles = [...files]
     if (newFiles[index]) {
       newFiles[index] = { ...newFiles[index], done: true }
-      const newState = { ...proofreadState, [newFiles[index].path]: true }
-      set({ files: newFiles, proofreadState: newState })
+      set({ files: newFiles })
     }
   },
   toggleSidebar: () => set({ sidebarVisible: !get().sidebarVisible })

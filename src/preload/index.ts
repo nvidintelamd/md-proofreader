@@ -5,10 +5,14 @@ const api = {
   readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
   readImage: (mdDir: string, imagePath: string) =>
     ipcRenderer.invoke('fs:readImage', mdDir, imagePath),
-  readProofreadState: (dir: string) =>
-    ipcRenderer.invoke('fs:readProofreadState', dir),
-  writeProofreadState: (dir: string, data: any) =>
-    ipcRenderer.invoke('fs:writeProofreadState', dir, data),
+
+  // Session persistence (stored in program userData directory)
+  loadSession: () => ipcRenderer.invoke('session:load'),
+  saveSession: (data: any) => ipcRenderer.invoke('session:save', data),
+  markDone: (filePath: string) => ipcRenderer.invoke('session:markDone', filePath),
+  resetFile: (filePath: string) => ipcRenderer.invoke('session:resetFile', filePath),
+
+  // Window controls
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),
   closeWindow: () => ipcRenderer.send('window:close')

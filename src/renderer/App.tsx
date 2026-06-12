@@ -17,7 +17,7 @@ export default function App() {
   const sidebarVisible = useAppStore(s => s.sidebarVisible)
   const toggleSidebar = useAppStore(s => s.toggleSidebar)
 
-  const { loadFiles, loadFileContent } = useFileLoader()
+  const { loadFiles, loadFileContent, loadLastSession } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
   const { completeCurrentAndNext, isAllDone } = useProofreadState()
 
@@ -25,6 +25,11 @@ export default function App() {
   const menuBarRef = useRef<HTMLDivElement>(null)
 
   useKeyboardNav()
+
+  // Auto-load last session on startup
+  useEffect(() => {
+    loadLastSession()
+  }, [])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

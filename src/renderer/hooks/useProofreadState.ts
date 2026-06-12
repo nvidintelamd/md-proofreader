@@ -1,60 +1,30 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
+import { loadFileContent } from './useFileLoader'
 
 export function useProofreadState() {
   const files = useAppStore(s => s.files)
 
   const completeCurrentAndNext = useCallback(async () => {
     const state = useAppStore.getState()
-    const { files, currentFileIndex, mdDir, proofreadState, markFileDone, setCurrentFileIndex, setCursorLine, setLines, addImageToCache } = state
+    const { files, currentFileIndex, markFileDoneLocal, setCurrentFileIndex, setCursorLine } = state
 
-    markFileDone(currentFileIndex)
+    const filePath = files[currentFileIndex].path
 
+    // Mark done in local state
+    markFileDoneLocal(currentFileIndex)
+
+    // Persist to session file
+    await window.api.markDone(filePath)
+
+    // Move to next unfinished
     const newFiles = [...files]
     newFiles[currentFileIndex] = { ...newFiles[currentFileIndex], done: true }
-    const stateToSave = { ...proofreadState, [newFiles[currentFileIndex].path]: true }
-    await window.api.writeProofreadState(mdDir, stateToSave)
-
     const nextIndex = newFiles.findIndex((f, i) => i > currentFileIndex && !f.done)
     if (nextIndex !== -1) {
       setCurrentFileIndex(nextIndex)
       setCursorLine(0)
-
-      const result = await window.api.readFile(newFiles[nextIndex].path)
-      if (result.success && result.content) {
-        const lines = result.content.split('\n')
-        setLines(lines)
-
-        // Markdown images
-        const mdImgRegex = /!\[.*?\]\((.*?)\)/g
-        let match
-        while ((match = mdImgRegex.exec(result.content)) !== null) {
-          const imgPath = match[1].trim()
-          if (imgPath) {
-            const cacheKey = `${mdDir}::${imgPath}`
-            try {
-              const imgResult = await window.api.readImage(mdDir, imgPath)
-              if (imgResult.success && imgResult.dataUrl) {
-                addImageToCache(cacheKey, imgResult.dataUrl)
-              }
-            } catch { /* ignore */ }
-          }
-        }
-        // HTML images
-        const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
-        while ((match = htmlImgRegex.exec(result.content)) !== null) {
-          const imgPath = match[1].trim()
-          if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('data:')) {
-            const cacheKey = `${mdDir}::${imgPath}`
-            try {
-              const imgResult = await window.api.readImage(mdDir, imgPath)
-              if (imgResult.success && imgResult.dataUrl) {
-                addImageToCache(cacheKey, imgResult.dataUrl)
-              }
-            } catch { /* ignore */ }
-          }
-        }
-      }
+      await loadFileContent(newFiles[nextIndex].path)
     }
   }, [])
 

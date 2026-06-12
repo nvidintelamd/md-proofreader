@@ -1,8 +1,11 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
-import { readFile, writeFile, stat } from 'fs/promises'
+import { readFile, writeFile, stat, mkdir } from 'fs/promises'
 
 let mainWindow: BrowserWindow | null = null
+
+const userDataPath = app.getPath('userData')
+const sessionPath = join(userDataPath, 'session.json')
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -21,14 +24,36 @@ function createWindow(): void {
     }
   })
 
-  // In dev mode, load from vite dev server
-  // Hide native menu bar — custom menu bar in renderer
   Menu.setApplicationMenu(null)
 
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+}
+
+// Session state: stores opened files + proofread status
+interface SessionData {
+  filePaths: string[]
+  proofreadStatus: Record<string, boolean>  // path -> done
+}
+
+async function readSession(): Promise<SessionData> {
+  try {
+    const content = await readFile(sessionPath, 'utf-8')
+    return JSON.parse(content)
+  } catch {
+    return { filePaths: [], proofreadStatus: {} }
+  }
+}
+
+async function writeSession(data: SessionData): Promise<void> {
+  try {
+    await mkdir(userDataPath, { recursive: true })
+    await writeFile(sessionPath, JSON.stringify(data, null, 2), 'utf-8')
+  } catch (err) {
+    console.error('Failed to write session:', err)
   }
 }
 
@@ -78,22 +103,27 @@ ipcMain.handle('fs:readImage', async (_event, mdDir: string, imagePath: string) 
   }
 })
 
-ipcMain.handle('fs:readProofreadState', async (_event, dir: string) => {
-  try {
-    const content = await readFile(join(dir, '.proofread.json'), 'utf-8')
-    return JSON.parse(content)
-  } catch {
-    return {}
-  }
+// Session IPC — all stored in program userData directory
+ipcMain.handle('session:load', async () => {
+  return readSession()
 })
 
-ipcMain.handle('fs:writeProofreadState', async (_event, dir: string, data: any) => {
-  try {
-    await writeFile(join(dir, '.proofread.json'), JSON.stringify(data, null, 2), 'utf-8')
-    return { success: true }
-  } catch (err: any) {
-    return { success: false, error: err.message }
-  }
+ipcMain.handle('session:save', async (_event, data: SessionData) => {
+  await writeSession(data)
+})
+
+ipcMain.handle('session:markDone', async (_event, filePath: string) => {
+  const session = await readSession()
+  session.proofreadStatus[filePath] = true
+  await writeSession(session)
+  return session
+})
+
+ipcMain.handle('session:resetFile', async (_event, filePath: string) => {
+  const session = await readSession()
+  delete session.proofreadStatus[filePath]
+  await writeSession(session)
+  return session
 })
 
 // Window control IPC
