@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
-import { renderMathInElement } from '../lib/katexSetup'
+import { renderMathInElement, renderMathString } from '../lib/katexSetup'
 
 export function PreviewArea() {
   const {
@@ -32,10 +32,21 @@ export function PreviewArea() {
   }, [mode])
 
   const handleBlockClick = useCallback((index: number) => {
-    if (mode === 'normal' || mode === 'edit_select') {
-      useAppStore.getState().setCursorBlock(index)
+    const state = useAppStore.getState()
+    if (state.mode === 'normal') {
+      state.setCursorBlock(index)
+    } else if (state.mode === 'edit_select') {
+      // First click already happened (set start), this is the second click (set end)
+      if (state.editRange) {
+        const start = Math.min(state.editRange.start, index)
+        const end = Math.max(state.editRange.start, index)
+        state.setEditRange({ start, end })
+        state.setCursorBlock(index)
+        // Immediately open modal
+        state.setMode('edit_modal')
+      }
     }
-  }, [mode])
+  }, [])
 
   if (blocks.length === 0) {
     return (
@@ -48,9 +59,16 @@ export function PreviewArea() {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto p-6"
+      className="flex-1 overflow-y-auto p-6 select-none"
       onScroll={handleScroll}
     >
+      {/* Mode hint */}
+      {mode === 'edit_select' && (
+        <div className="sticky top-0 z-10 bg-yellow-100 text-yellow-800 text-xs text-center py-1 rounded mb-2">
+          请点击结束行（起始行: {editRange ? editRange.start + 1 : '-'})
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto">
         {blocks.map((block, index) => {
           const isCursor = index === cursorBlock
@@ -98,7 +116,6 @@ function BlockRenderer({ block, imageCache, mdDir }: {
     case 'heading': {
       const level = block.level || 1
       const text = content.replace(/^#{1,6}\s+/, '')
-      const HeadingTag = `h${level}` as keyof JSX.IntrinsicElements
       const sizes: Record<number, string> = {
         1: 'text-2xl font-bold',
         2: 'text-xl font-bold',
@@ -112,20 +129,22 @@ function BlockRenderer({ block, imageCache, mdDir }: {
           <span className="text-indigo-500 font-mono text-xs">
             {'#'.repeat(level)}
           </span>
-          <HeadingTag className={sizes[level] || sizes[1]}>
+          <span className={sizes[level] || sizes[1]}>
             {renderInlineContent(text, imageCache, mdDir)}
-          </HeadingTag>
+          </span>
         </div>
       )
     }
 
-    case 'math':
+    case 'math': {
+      // Extract math content between $$ markers
+      const mathContent = content.replace(/^\$\$\s*\n?/, '').replace(/\n?\s*\$\$$/, '')
       return (
         <div className="my-2 p-2 bg-gray-50 rounded overflow-x-auto">
-          <div className="font-mono text-xs text-gray-500 mb-1">Math</div>
-          <div>{content}</div>
+          <div dangerouslySetInnerHTML={{ __html: renderMathString(mathContent, true) }} />
         </div>
       )
+    }
 
     case 'table':
       return (
@@ -166,6 +185,19 @@ function BlockRenderer({ block, imageCache, mdDir }: {
 
     case 'paragraph':
     default:
+      // Check if it's a list (lines starting with - or *)
+      const isList = block.lines.some((l: string) => /^\s*[-*+]\s/.test(l) || /^\s*\d+\.\s/.test(l))
+      if (isList) {
+        return (
+          <div className="leading-relaxed">
+            {block.lines.map((line: string, idx: number) => (
+              <div key={idx} className="py-0.5">
+                {renderInlineContent(line, imageCache, mdDir)}
+              </div>
+            ))}
+          </div>
+        )
+      }
       return (
         <div className="leading-relaxed">
           {renderInlineContent(content, imageCache, mdDir)}
@@ -176,16 +208,13 @@ function BlockRenderer({ block, imageCache, mdDir }: {
 
 function renderInlineContent(text: string, imageCache: Map<string, string>, mdDir: string): React.ReactNode {
   const parts: React.ReactNode[] = []
-  let remaining = text
   let key = 0
 
-  // Process inline images
   const imgRegex = /!\[.*?\]\((.*?)\)/g
   let match
   let lastIndex = 0
 
   while ((match = imgRegex.exec(text)) !== null) {
-    // Text before image
     if (match.index > lastIndex) {
       parts.push(renderBoldText(text.slice(lastIndex, match.index), key++))
     }
@@ -226,7 +255,7 @@ function renderBoldText(text: string, key: number): React.ReactNode {
     }
     parts.push(
       <span key={`${key}-bold-${match.index}`} className="font-bold">
-        **{match[1]}**
+        {match[1]}
       </span>
     )
     lastIndex = match.index + match[0].length

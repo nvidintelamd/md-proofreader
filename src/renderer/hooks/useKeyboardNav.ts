@@ -8,7 +8,6 @@ export function useKeyboardNav() {
   } = useAppStore()
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    // Don't handle if focus is on textarea
     if (e.target instanceof HTMLTextAreaElement) return
     if (mode === 'edit_modal') return
 
@@ -36,7 +35,6 @@ export function useKeyboardNav() {
       case 'h':
       case 'ArrowLeft':
         if (e.ctrlKey) {
-          // Word jump left - not implemented yet
           e.preventDefault()
         } else {
           e.preventDefault()
@@ -46,7 +44,6 @@ export function useKeyboardNav() {
       case 'l':
       case 'ArrowRight':
         if (e.ctrlKey) {
-          // Word jump right - not implemented yet
           e.preventDefault()
         } else {
           e.preventDefault()
@@ -62,7 +59,6 @@ export function useKeyboardNav() {
         setCursorBlock(cursorBlock - 10)
         break
       case 'g':
-        // gg = go to top (simplified: just g for now)
         e.preventDefault()
         setCursorBlock(0)
         break
@@ -79,36 +75,15 @@ export function useKeyboardNav() {
   }
 
   const handleEditSelectMode = (e: KeyboardEvent) => {
-    const { cursorBlock, editRange, setCursorBlock, setEditRange, setMode } = useAppStore.getState()
+    const { setMode, setEditRange } = useAppStore.getState()
 
     switch (e.key) {
-      case 'j':
-      case 'ArrowDown':
-        e.preventDefault()
-        if (editRange) {
-          const newEnd = Math.min(editRange.end + 1, useAppStore.getState().blocks.length - 1)
-          setEditRange({ ...editRange, end: newEnd })
-          setCursorBlock(newEnd)
-        }
-        break
-      case 'k':
-      case 'ArrowUp':
-        e.preventDefault()
-        if (editRange) {
-          const newEnd = Math.max(editRange.end - 1, editRange.start)
-          setEditRange({ ...editRange, end: newEnd })
-          setCursorBlock(newEnd)
-        }
-        break
-      case 'Enter':
-        e.preventDefault()
-        setMode('edit_modal')
-        break
       case 'Escape':
         e.preventDefault()
         setMode('normal')
         setEditRange(null)
         break
+      // In click-to-select mode, j/k do nothing - user clicks to select
     }
   }
 

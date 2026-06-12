@@ -1,11 +1,4 @@
-import MarkdownIt from 'markdown-it'
 import type { Block } from '../store/appStore'
-
-const md = new MarkdownIt({
-  html: true,
-  linkify: true,
-  typographer: true
-})
 
 export function parseMdToBlocks(source: string): Block[] {
   const lines = source.split('\n')
@@ -54,6 +47,33 @@ export function parseMdToBlocks(source: string): Block[] {
         id: blockId++,
         type: 'math',
         lines: mathLines,
+        startLine: i,
+        endLine: j - 1
+      })
+      i = j
+      continue
+    }
+
+    // List item (- or * or + or 1.)
+    if (/^(\s*[-*+]|\s*\d+\.)\s/.test(line)) {
+      const listLines = [line]
+      let j = i + 1
+      while (j < lines.length) {
+        const nextLine = lines[j]
+        const nextTrimmed = nextLine.trim()
+        if (nextTrimmed === '') break
+        // Continue if it's a list item or indented continuation
+        if (/^(\s*[-*+]|\s*\d+\.)\s/.test(nextLine) || /^\s{2,}/.test(nextLine)) {
+          listLines.push(nextLine)
+          j++
+        } else {
+          break
+        }
+      }
+      blocks.push({
+        id: blockId++,
+        type: 'paragraph',
+        lines: listLines,
         startLine: i,
         endLine: j - 1
       })
@@ -165,6 +185,7 @@ export function parseMdToBlocks(source: string): Block[] {
       if (nextLine.startsWith('<table')) break
       if (/^(-{3,}|\*{3,}|_{3,})$/.test(nextLine)) break
       if (nextLine.startsWith('```')) break
+      if (/^(\s*[-*+]|\s*\d+\.)\s/.test(lines[j])) break
       paraLines.push(lines[j])
       j++
     }
@@ -179,8 +200,4 @@ export function parseMdToBlocks(source: string): Block[] {
   }
 
   return blocks
-}
-
-export function renderMdToHtml(source: string): string {
-  return md.render(source)
 }
