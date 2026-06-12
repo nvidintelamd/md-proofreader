@@ -7,9 +7,17 @@ export function useProofreadState() {
 
   const completeCurrentAndNext = useCallback(async () => {
     const state = useAppStore.getState()
-    const { files, currentFileIndex, markFileDoneLocal, setCurrentFileIndex, setCursorLine } = state
+    const { files, currentFileIndex, lines, markFileDoneLocal, setCurrentFileIndex, setCursorLine } = state
 
     const filePath = files[currentFileIndex].path
+
+    // Save current content back to the MD file
+    const content = lines.join('\n')
+    const writeResult = await window.api.writeFile(filePath, content)
+    if (!writeResult.success) {
+      console.error('Failed to save file:', writeResult.error)
+      return
+    }
 
     // Mark done in local state
     markFileDoneLocal(currentFileIndex)

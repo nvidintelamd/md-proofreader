@@ -87,6 +87,15 @@ ipcMain.handle('fs:readFile', async (_event, filePath: string) => {
   }
 })
 
+ipcMain.handle('fs:writeFile', async (_event, filePath: string, content: string) => {
+  try {
+    await writeFile(filePath, content, 'utf-8')
+    return { success: true }
+  } catch (err: any) {
+    return { success: false, error: err.message }
+  }
+})
+
 ipcMain.handle('fs:readImage', async (_event, mdDir: string, imagePath: string) => {
   try {
     const fullPath = join(mdDir, imagePath.replace(/^\//, ''))

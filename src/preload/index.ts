@@ -3,6 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 const api = {
   openFiles: () => ipcRenderer.invoke('dialog:openFiles'),
   readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
+  writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
   readImage: (mdDir: string, imagePath: string) =>
     ipcRenderer.invoke('fs:readImage', mdDir, imagePath),
 
