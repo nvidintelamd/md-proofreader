@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useCallback, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
-import { renderMathInElement, renderMathString } from '../lib/katexSetup'
+import { renderMathString } from '../lib/katexSetup'
 
 export function PreviewArea() {
   const lines = useAppStore(s => s.lines)
@@ -9,9 +9,9 @@ export function PreviewArea() {
   const editRange = useAppStore(s => s.editRange)
   const imageCache = useAppStore(s => s.imageCache)
   const mdDir = useAppStore(s => s.mdDir)
+  const currentFileIndex = useAppStore(s => s.currentFileIndex)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  // Clamp cursor when lines change
   useEffect(() => {
     const { cursorLine, setCursorLine } = useAppStore.getState()
     if (lines.length > 0 && cursorLine >= lines.length) {
@@ -32,16 +32,6 @@ export function PreviewArea() {
     })
     return blocks
   }, [lines])
-
-  useEffect(() => {
-    if (containerRef.current) {
-      try {
-        renderMathInElement(containerRef.current)
-      } catch (err) {
-        console.warn('KaTeX render error:', err)
-      }
-    }
-  }, [lines, cursorLine])
 
   const handleScroll = useCallback(() => {
     if (!containerRef.current || mode !== 'normal') return
@@ -99,7 +89,7 @@ export function PreviewArea() {
 
         return (
           <div
-            key={idx}
+            key={`${currentFileIndex}-${idx}`}
             data-line-index={idx}
             className={`flex items-start cursor-pointer transition-colors duration-50 ${
               isCursor ? 'bg-blue-100' : ''
@@ -161,6 +151,7 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
     )
   }
 
+  // Split by inline images
   const imgRegex = /!\[.*?\]\((.*?)\)/g
   const parts: React.ReactNode[] = []
   let lastIdx = 0
@@ -169,14 +160,15 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 
   while ((match = imgRegex.exec(line)) !== null) {
     if (match.index > lastIdx) {
-      parts.push(renderStyledText(line.substring(lastIdx, match.index), key++))
+      const textSeg = line.substring(lastIdx, match.index)
+      parts.push(<span key={`t${key++}`} dangerouslySetInnerHTML={{ __html: renderTextSegment(textSeg) }} />)
     }
     const rawPath = match[1].trim()
     const cacheKey = `${mdDir}::${rawPath}`
     const imgUrl = imageCache.get(cacheKey) || rawPath
     parts.push(
       <img
-        key={key++}
+        key={`i${key++}`}
         src={imgUrl}
         alt=""
         className="inline-block max-w-[200px] max-h-[200px] my-1 border border-gray-200 rounded bg-gray-50 align-middle"
@@ -198,39 +190,33 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
       <span>
         <span className="text-indigo-600 font-bold mr-1">{hMatch[1]}</span>
         {parts}
-        {renderStyledText(hMatch[2], key++)}
+        <span dangerouslySetInnerHTML={{ __html: renderTextSegment(hMatch[2]) }} />
       </span>
     )
   }
 
   if (parts.length > 0) {
-    return <>{parts}{remaining ? renderStyledText(remaining, key++) : null}</>
+    return <>{parts}<span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} /></>
   }
 
-  return renderStyledText(remaining, 0)
+  return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} />
 }
 
-function renderStyledText(text: string, key: number): React.ReactNode {
-  if (!text) return null
+function renderTextSegment(text: string): string {
+  if (!text) return ''
+  // Escape HTML first to prevent XSS from user content
+  let result = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
 
-  const parts: React.ReactNode[] = []
-  const boldRegex = /\*\*(.*?)\*\*/g
-  let match
-  let lastIndex = 0
+  // Bold **text** — must run before math since math may contain **
+  result = result.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
 
-  while ((match = boldRegex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index))
-    }
-    parts.push(
-      <span key={`${key}-b-${match.index}`} className="font-bold">{match[1]}</span>
-    )
-    lastIndex = match.index + match[0].length
-  }
+  // Inline math $...$ (not $$) — render via KaTeX
+  result = result.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
+    return renderMathString(math, false)
+  })
 
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex))
-  }
-
-  return parts.length > 0 ? <>{parts}</> : text
+  return result
 }
