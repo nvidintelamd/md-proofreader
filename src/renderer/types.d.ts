@@ -8,6 +8,9 @@ declare global {
       readImage: (mdDir: string, imagePath: string) => Promise<{ success: boolean; dataUrl: string }>
       readProofreadState: (dir: string) => Promise<Record<string, boolean>>
       writeProofreadState: (dir: string, data: any) => Promise<{ success: boolean; error?: string }>
+      minimizeWindow: () => void
+      maximizeWindow: () => void
+      closeWindow: () => void
     }
   }
 }

@@ -10,6 +10,9 @@ function createWindow(): void {
     height: 800,
     minWidth: 900,
     minHeight: 600,
+    frame: false,
+    titleBarStyle: 'hidden',
+    titleBarOverlay: false,
     title: 'MD校对工具',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -93,7 +96,18 @@ ipcMain.handle('fs:writeProofreadState', async (_event, dir: string, data: any) 
   }
 })
 
-app.whenReady().then(createWindow)
+// Window control IPC
+ipcMain.on('window:minimize', () => mainWindow?.minimize())
+ipcMain.on('window:maximize', () => {
+  if (mainWindow?.isMaximized()) mainWindow.unmaximize()
+  else mainWindow?.maximize()
+})
+ipcMain.on('window:close', () => mainWindow?.close())
+
+app.whenReady().then(() => {
+  Menu.setApplicationMenu(null)
+  createWindow()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()

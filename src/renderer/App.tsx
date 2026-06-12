@@ -56,15 +56,17 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Single-row menu bar */}
+      {/* Custom title bar — draggable, no native frame */}
       <div
         ref={menuBarRef}
-        className="bg-white border-b flex items-center h-8 px-1 shadow-sm z-50 select-none text-xs"
+        className="bg-[#3c3c3c] flex items-center h-[30px] px-1 select-none text-xs flex-shrink-0"
+        style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
         {/* Sidebar toggle */}
         <button
           onClick={toggleSidebar}
-          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 flex-shrink-0"
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-white/10 text-white/70 flex-shrink-0"
+          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           title={sidebarVisible ? '收起侧边栏' : '展开侧边栏'}
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -102,37 +104,83 @@ export default function App() {
           <MenuItem label="重新加载" shortcut="Ctrl+R" onClick={() => window.location.reload()} />
         </MenuBarItem>
 
-        {/* Complete button — direct, no dropdown */}
+        {/* Complete button */}
         {files.length > 0 && (
           <button
             onClick={completeCurrentAndNext}
             disabled={isAllDone()}
             className={`ml-1 px-2.5 py-1 rounded transition-colors ${
               isAllDone()
-                ? 'text-gray-400 cursor-not-allowed'
-                : 'text-green-700 hover:bg-green-50 font-medium'
+                ? 'text-white/30 cursor-not-allowed'
+                : 'text-green-400 hover:bg-white/10 font-medium'
             }`}
+            style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
           >
             {isAllDone() ? '全部完成 ✓' : '完成本篇校对'}
           </button>
         )}
 
-        {/* Right-aligned filename */}
-        <div className="flex-1 text-right pr-2">
+        {/* Centered filename */}
+        <div className="flex-1 text-center">
           {currentFileName && (
-            <span className="text-gray-400">
+            <span className="text-white/40 text-[11px]">
               {currentFileName}
               {files.length > 1 && (
-                <span className="text-gray-300 ml-1">({currentFileIndex + 1}/{files.length})</span>
+                <span className="text-white/25 ml-1">({currentFileIndex + 1}/{files.length})</span>
               )}
             </span>
           )}
         </div>
+
+        {/* Window controls */}
+        <div className="flex items-center flex-shrink-0" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
+          <button
+            onClick={() => window.api.minimizeWindow()}
+            className="w-[46px] h-[30px] flex items-center justify-center hover:bg-white/10 text-white/70"
+          >
+            <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+          </button>
+          <button
+            onClick={() => window.api.maximizeWindow()}
+            className="w-[46px] h-[30px] flex items-center justify-center hover:bg-white/10 text-white/70"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1">
+              <rect x="0.5" y="0.5" width="9" height="9" />
+            </svg>
+          </button>
+          <button
+            onClick={() => window.api.closeWindow()}
+            className="w-[46px] h-[30px] flex items-center justify-center hover:bg-red-500 hover:text-white text-white/70"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2">
+              <line x1="0" y1="0" x2="10" y2="10" /><line x1="10" y1="0" x2="0" y2="10" />
+            </svg>
+          </button>
+        </div>
       </div>
 
-      {/* Main content */}
+      {/* Body: activity bar + sidebar + content */}
       <div className="flex-1 flex overflow-hidden">
+        {/* VSCode-style vertical activity bar */}
+        <div className="w-12 bg-[#333] flex flex-col items-center pt-1 gap-0.5 flex-shrink-0">
+          <button
+            onClick={toggleSidebar}
+            className={`w-10 h-10 flex items-center justify-center border-l-2 ${
+              sidebarVisible ? 'border-white text-white' : 'border-transparent text-white/50 hover:text-white/80'
+            }`}
+            title="资源管理器"
+          >
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="currentColor">
+              <path d="M18 3a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h14zm-1 2H5v12h12V5z"/>
+              <path d="M7 7h3v2H7V7zm0 4h3v2H7v-2zm5-4h3v2h-3V7zm0 4h3v2h-3v-2z"/>
+            </svg>
+          </button>
+        </div>
+
+        {/* Sidebar */}
         <FileList onFileSelect={handleFileSelect} />
+
+        {/* Preview */}
         <div className="flex-1 flex flex-col bg-white">
           <ErrorBoundary>
             <PreviewArea onOpenFiles={handleOpenFiles} />
@@ -157,16 +205,16 @@ function MenuBarItem({ label, isOpen, onClick, onMouseEnter, children }: {
   children: React.ReactNode
 }) {
   return (
-    <div className="relative">
+    <div className="relative" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
       <button
-        className={`px-2 py-1 rounded ${isOpen ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-600`}
+        className={`px-2 py-1 rounded ${isOpen ? 'bg-white/10' : 'hover:bg-white/5'} text-white/80`}
         onClick={onClick}
         onMouseEnter={onMouseEnter}
       >
         {label}
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 mt-0 bg-white border rounded shadow-lg py-1 min-w-[180px] z-50">
+        <div className="absolute top-full left-0 mt-0 bg-[#252526] border border-white/10 rounded shadow-lg py-1 min-w-[200px] z-50">
           {children}
         </div>
       )}
@@ -181,11 +229,11 @@ function MenuItem({ label, shortcut, onClick }: {
 }) {
   return (
     <button
-      className="w-full text-left px-4 py-1.5 hover:bg-gray-100 flex items-center justify-between gap-4"
+      className="w-full text-left px-4 py-1.5 hover:bg-white/10 flex items-center justify-between gap-4 text-white/80 text-xs"
       onClick={onClick}
     >
       <span>{label}</span>
-      {shortcut && <span className="text-gray-400 text-[10px]">{shortcut}</span>}
+      {shortcut && <span className="text-white/30 text-[10px]">{shortcut}</span>}
     </button>
   )
 }

@@ -8,7 +8,10 @@ const api = {
   readProofreadState: (dir: string) =>
     ipcRenderer.invoke('fs:readProofreadState', dir),
   writeProofreadState: (dir: string, data: any) =>
-    ipcRenderer.invoke('fs:writeProofreadState', dir, data)
+    ipcRenderer.invoke('fs:writeProofreadState', dir, data),
+  minimizeWindow: () => ipcRenderer.send('window:minimize'),
+  maximizeWindow: () => ipcRenderer.send('window:maximize'),
+  closeWindow: () => ipcRenderer.send('window:close')
 }
 
 if (process.contextIsolated) {
