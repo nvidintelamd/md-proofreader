@@ -7,7 +7,7 @@ export function useProofreadState() {
 
   const completeCurrentAndNext = useCallback(async () => {
     const state = useAppStore.getState()
-    const { files, currentFileIndex, lines, markFileDoneLocal, setCurrentFileIndex, setCursorLine } = state
+    const { files, currentFileIndex, lines, markFileDoneLocal, setCurrentFileIndex, clearFileState } = state
 
     const filePath = files[currentFileIndex].path
 
@@ -18,6 +18,9 @@ export function useProofreadState() {
       console.error('Failed to save file:', writeResult.error)
       return
     }
+
+    // Clear this file's state (undo, highlights, selection)
+    clearFileState(filePath)
 
     // Mark done in local state
     markFileDoneLocal(currentFileIndex)
@@ -31,7 +34,6 @@ export function useProofreadState() {
     const nextIndex = newFiles.findIndex((f, i) => i > currentFileIndex && !f.done)
     if (nextIndex !== -1) {
       setCurrentFileIndex(nextIndex)
-      setCursorLine(0)
       await loadFileContent(newFiles[nextIndex].path)
     }
   }, [])

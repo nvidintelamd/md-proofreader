@@ -16,6 +16,15 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
   const dragEnd = useAppStore(s => s.dragEnd)
   const containerRef = useRef<HTMLDivElement>(null)
 
+  // Restore scroll position when file changes
+  useEffect(() => {
+    const state = useAppStore.getState()
+    const filePath = state.files[state.currentFileIndex]?.path
+    if (filePath && state.fileStates[filePath] && containerRef.current) {
+      containerRef.current.scrollTop = state.fileStates[filePath].scrollTop
+    }
+  }, [currentFileIndex])
+
   useEffect(() => {
     const { cursorLine, setCursorLine } = useAppStore.getState()
     if (lines.length > 0 && cursorLine >= lines.length) {
@@ -38,8 +47,13 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
   }, [lines])
 
   const handleScroll = useCallback(() => {
-    if (!containerRef.current || mode !== 'normal') return
+    if (!containerRef.current) return
     const container = containerRef.current
+
+    // Save scroll position for current file
+    useAppStore.getState().setScrollTop(container.scrollTop)
+
+    if (mode !== 'normal') return
     const lineEls = container.querySelectorAll('[data-line-index]')
     const containerRect = container.getBoundingClientRect()
 
@@ -63,21 +77,27 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     state.setCursorLine(idx)
   }, [])
 
-  const handleMouseMove = useCallback((idx: number) => {
+  const handleMouseMove = useCallback((idx: number, e: React.MouseEvent) => {
     const state = useAppStore.getState()
     if (state.isDragging) {
-      state.updateDrag(idx)
+      // Threshold: select line when mouse enters top 1/5 of the line element
+      const target = e.currentTarget as HTMLElement
+      const rect = target.getBoundingClientRect()
+      const threshold = rect.top + rect.height * 0.2
+      if (e.clientY <= threshold) {
+        state.updateDrag(idx)
+      }
 
       // Auto-scroll when near edges
       const container = containerRef.current
       if (container) {
         const el = container.querySelector(`[data-line-index="${idx}"]`)
         if (el) {
-          const rect = el.getBoundingClientRect()
+          const elRect = el.getBoundingClientRect()
           const cRect = container.getBoundingClientRect()
-          if (rect.bottom > cRect.bottom - 40) {
+          if (elRect.bottom > cRect.bottom - 40) {
             container.scrollTop += 20
-          } else if (rect.top < cRect.top + 40) {
+          } else if (elRect.top < cRect.top + 40) {
             container.scrollTop -= 20
           }
         }
@@ -89,14 +109,6 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     const state = useAppStore.getState()
     if (state.isDragging) {
       state.endDrag()
-    }
-  }, [])
-
-  // Double-click to edit
-  const handleDoubleClick = useCallback(() => {
-    const state = useAppStore.getState()
-    if (state.editRange) {
-      state.setMode('edit_modal')
     }
   }, [])
 
@@ -142,8 +154,7 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
             data-line-index={idx}
             className={`flex items-start cursor-pointer transition-colors duration-50 hover:bg-gray-50 ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
-            onMouseMove={() => handleMouseMove(idx)}
-            onDoubleClick={handleDoubleClick}
+            onMouseMove={(e) => handleMouseMove(idx, e)}
           >
             <span className="flex-shrink-0 w-12 text-right pr-2 text-[10px] text-gray-400 select-none py-0.5" style={{ marginTop: '2px' }}>
               {idx + 1}

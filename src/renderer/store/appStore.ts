@@ -13,6 +13,18 @@ export interface UndoEntry {
   range: { start: number; end: number }
 }
 
+export interface FileState {
+  editRange: { start: number; end: number } | null
+  editedRange: { start: number; end: number } | null
+  undoStack: UndoEntry[]
+  cursorLine: number
+  scrollTop: number
+}
+
+function createFileState(): FileState {
+  return { editRange: null, editedRange: null, undoStack: [], cursorLine: 0, scrollTop: 0 }
+}
+
 interface AppState {
   files: FileItem[]
   currentFileIndex: number
@@ -24,16 +36,19 @@ interface AppState {
   imageCache: Map<string, string>
   sidebarVisible: boolean
 
-  // Drag selection
+  // Per-file state map (keyed by file path)
+  fileStates: Record<string, FileState>
+
+  // Drag
   dragStart: number | null
   dragEnd: number | null
   isDragging: boolean
 
-  // Undo
-  undoStack: UndoEntry[]
-
-  // Edited line range (for purple highlight)
+  // Edited range (for purple highlight) — derived from fileState
   editedRange: { start: number; end: number } | null
+
+  // Undo — derived from fileState
+  undoStack: UndoEntry[]
 
   setFiles: (files: FileItem[]) => void
   setCurrentFileIndex: (index: number) => void
@@ -46,18 +61,25 @@ interface AppState {
   markFileDoneLocal: (index: number) => void
   toggleSidebar: () => void
 
-  // Drag
   startDrag: (index: number) => void
   updateDrag: (index: number) => void
   endDrag: () => void
 
-  // Undo
   pushUndo: (entry: UndoEntry) => void
   undo: () => void
-  clearUndo: () => void
 
-  // Edited range
   setEditedRange: (range: { start: number; end: number } | null) => void
+
+  // Per-file state management
+  saveCurrentFileState: () => void
+  restoreFileState: (filePath: string) => void
+  clearFileState: (filePath: string) => void
+  setScrollTop: (top: number) => void
+}
+
+function getCurrentFilePath(get: () => AppState): string {
+  const { files, currentFileIndex } = get()
+  return files[currentFileIndex]?.path || ''
 }
 
 export const useAppStore = create<AppState>((set, get) => ({
@@ -71,13 +93,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   imageCache: new Map(),
   sidebarVisible: true,
 
+  fileStates: {},
+
   dragStart: null,
   dragEnd: null,
   isDragging: false,
 
-  undoStack: [],
-
   editedRange: null,
+  undoStack: [],
 
   setFiles: (files) => set({ files }),
   setCurrentFileIndex: (index) => set({ currentFileIndex: index }),
@@ -137,7 +160,47 @@ export const useAppStore = create<AppState>((set, get) => ({
     setCursorLine(entry.range.start)
     setEditRange(null)
   },
-  clearUndo: () => set({ undoStack: [] }),
 
-  setEditedRange: (range) => set({ editedRange: range })
+  setEditedRange: (range) => set({ editedRange: range }),
+
+  saveCurrentFileState: () => {
+    const filePath = getCurrentFilePath(get)
+    if (!filePath) return
+    const { editRange, editedRange, undoStack, cursorLine } = get()
+    const states = { ...get().fileStates }
+    states[filePath] = { editRange, editedRange, undoStack, cursorLine, scrollTop: 0 }
+    set({ fileStates: states })
+  },
+
+  restoreFileState: (filePath: string) => {
+    const { fileStates } = get()
+    const state = fileStates[filePath] || createFileState()
+    set({
+      editRange: state.editRange,
+      editedRange: state.editedRange,
+      undoStack: state.undoStack,
+      cursorLine: state.cursorLine
+    })
+  },
+
+  clearFileState: (filePath: string) => {
+    const states = { ...get().fileStates }
+    delete states[filePath]
+    set({
+      fileStates: states,
+      editRange: null,
+      editedRange: null,
+      undoStack: [],
+      cursorLine: 0
+    })
+  },
+
+  setScrollTop: (top: number) => {
+    const filePath = getCurrentFilePath(get)
+    if (!filePath) return
+    const states = { ...get().fileStates }
+    if (!states[filePath]) states[filePath] = createFileState()
+    states[filePath].scrollTop = top
+    set({ fileStates: states })
+  }
 }))

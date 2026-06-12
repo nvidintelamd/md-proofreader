@@ -42,9 +42,10 @@ export default function App() {
   }, [])
 
   const handleFileSelect = useCallback(async (index: number) => {
-    const { files, setCurrentFileIndex, setCursorLine } = useAppStore.getState()
+    const { files, saveCurrentFileState, setCurrentFileIndex } = useAppStore.getState()
+    // Save current file's state before switching
+    saveCurrentFileState()
     setCurrentFileIndex(index)
-    setCursorLine(0)
     try {
       await loadFileContent(files[index].path)
     } catch (err) {

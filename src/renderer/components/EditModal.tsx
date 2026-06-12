@@ -65,10 +65,9 @@ export function EditModal({ onSave, onCancel }: Props) {
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={onCancel}>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
       <div
         className="bg-white rounded-lg shadow-2xl w-[800px] max-h-[80vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b">
           <h3 className="text-sm font-semibold text-gray-700">

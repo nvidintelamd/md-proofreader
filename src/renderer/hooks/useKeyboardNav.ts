@@ -52,6 +52,13 @@ function handleNormalMode(e: KeyboardEvent) {
     return
   }
 
+  // Enter with selection: open edit modal
+  if (e.key === 'Enter' && editRange) {
+    e.preventDefault()
+    setMode('edit_modal')
+    return
+  }
+
   switch (e.key) {
     case 'j':
     case 'ArrowDown':
