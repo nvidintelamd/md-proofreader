@@ -25,11 +25,26 @@ export function useProofreadState() {
         const lines = result.content.split('\n')
         setLines(lines)
 
-        const imageRegex = /!\[.*?\]\((.*?)\)/g
+        // Markdown images
+        const mdImgRegex = /!\[.*?\]\((.*?)\)/g
         let match
-        while ((match = imageRegex.exec(result.content)) !== null) {
+        while ((match = mdImgRegex.exec(result.content)) !== null) {
           const imgPath = match[1].trim()
           if (imgPath) {
+            const cacheKey = `${mdDir}::${imgPath}`
+            try {
+              const imgResult = await window.api.readImage(mdDir, imgPath)
+              if (imgResult.success && imgResult.dataUrl) {
+                addImageToCache(cacheKey, imgResult.dataUrl)
+              }
+            } catch { /* ignore */ }
+          }
+        }
+        // HTML images
+        const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
+        while ((match = htmlImgRegex.exec(result.content)) !== null) {
+          const imgPath = match[1].trim()
+          if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('data:')) {
             const cacheKey = `${mdDir}::${imgPath}`
             try {
               const imgResult = await window.api.readImage(mdDir, imgPath)

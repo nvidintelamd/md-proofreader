@@ -38,11 +38,20 @@ export function useFileLoader() {
     setCursorLine(0)
 
     const dir = mdDir || useAppStore.getState().mdDir
-    const imageRegex = /!\[.*?\]\((.*?)\)/g
+
+    // Extract images from markdown syntax ![](path)
+    const mdImgRegex = /!\[.*?\]\((.*?)\)/g
     let match
-    while ((match = imageRegex.exec(result.content)) !== null) {
+    while ((match = mdImgRegex.exec(result.content)) !== null) {
       const imgPath = match[1].trim()
-      if (imgPath) {
+      if (imgPath) resolveImagePath(dir, imgPath, addImageToCache)
+    }
+
+    // Extract images from HTML <img src="path"> tags
+    const htmlImgRegex = /<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi
+    while ((match = htmlImgRegex.exec(result.content)) !== null) {
+      const imgPath = match[1].trim()
+      if (imgPath && !imgPath.startsWith('http') && !imgPath.startsWith('data:')) {
         resolveImagePath(dir, imgPath, addImageToCache)
       }
     }

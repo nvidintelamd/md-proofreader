@@ -168,7 +168,7 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 
   // Check for HTML table — render with LaTeX processing in cells
   if (line.includes('<table') || line.includes('<tr') || line.includes('<td') || line.includes('</table>')) {
-    return <div dangerouslySetInnerHTML={{ __html: renderTableWithMath(line) }} />
+    return <div dangerouslySetInnerHTML={{ __html: renderTableWithMath(line, imageCache, mdDir) }} />
   }
 
   // Split by inline images
@@ -218,14 +218,26 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
   return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} />
 }
 
-function renderTableWithMath(html: string): string {
+function renderTableWithMath(html: string, imageCache: Map<string, string>, mdDir: string): string {
+  // Replace <img src="..."> with cached image URLs
+  let result = html.replace(/<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi, (match, src) => {
+    const cacheKey = `${mdDir}::${src}`
+    const cachedUrl = imageCache.get(cacheKey)
+    if (cachedUrl) {
+      return match.replace(src, cachedUrl)
+    }
+    return match
+  })
+
   // Process table cells for LaTeX: replace $...$ and $$...$$ inside <td>...</td> and <th>...</th>
-  return html.replace(/(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/g, (_match, openTag, content, closeTag) => {
+  result = result.replace(/(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/g, (_match, openTag, content, closeTag) => {
     const processed = content
       .replace(/\$\$([\s\S]*?)\$\$/g, (_m: string, math: string) => renderMathString(math.trim(), true))
       .replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_m: string, math: string) => renderMathString(math.trim(), false))
     return openTag + processed + closeTag
   })
+
+  return result
 }
 
 function renderTextSegment(text: string): string {
