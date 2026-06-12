@@ -54,6 +54,29 @@ export function parseMdToBlocks(source: string): Block[] {
       continue
     }
 
+    // HTML table (anywhere in line)
+    if (trimmed.includes('<table') || trimmed.includes('<tr') || trimmed.includes('<td')) {
+      const tableLines = [line]
+      let j = i + 1
+      while (j < lines.length && !lines[j].trim().includes('</table>')) {
+        tableLines.push(lines[j])
+        j++
+      }
+      if (j < lines.length) {
+        tableLines.push(lines[j])
+        j++
+      }
+      blocks.push({
+        id: blockId++,
+        type: 'table',
+        lines: tableLines,
+        startLine: i,
+        endLine: j - 1
+      })
+      i = j
+      continue
+    }
+
     // List item (- or * or + or 1.)
     if (/^(\s*[-*+]|\s*\d+\.)\s/.test(line)) {
       const listLines = [line]
@@ -62,7 +85,6 @@ export function parseMdToBlocks(source: string): Block[] {
         const nextLine = lines[j]
         const nextTrimmed = nextLine.trim()
         if (nextTrimmed === '') break
-        // Continue if it's a list item or indented continuation
         if (/^(\s*[-*+]|\s*\d+\.)\s/.test(nextLine) || /^\s{2,}/.test(nextLine)) {
           listLines.push(nextLine)
           j++
@@ -94,34 +116,11 @@ export function parseMdToBlocks(source: string): Block[] {
       continue
     }
 
-    // Table (starts with |)
+    // Markdown table (starts with |)
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
       const tableLines = [line]
       let j = i + 1
       while (j < lines.length && lines[j].trim().startsWith('|') && lines[j].trim().endsWith('|')) {
-        tableLines.push(lines[j])
-        j++
-      }
-      blocks.push({
-        id: blockId++,
-        type: 'table',
-        lines: tableLines,
-        startLine: i,
-        endLine: j - 1
-      })
-      i = j
-      continue
-    }
-
-    // HTML table
-    if (trimmed.startsWith('<table')) {
-      const tableLines = [line]
-      let j = i + 1
-      while (j < lines.length && !lines[j].trim().includes('</table>')) {
-        tableLines.push(lines[j])
-        j++
-      }
-      if (j < lines.length) {
         tableLines.push(lines[j])
         j++
       }
@@ -176,16 +175,17 @@ export function parseMdToBlocks(source: string): Block[] {
     const paraLines = [line]
     let j = i + 1
     while (j < lines.length) {
-      const nextLine = lines[j].trim()
-      if (nextLine === '') break
-      if (/^#{1,6}\s/.test(nextLine)) break
-      if (nextLine === '$$') break
-      if (/^!\[.*?\]\(.*?\)/.test(nextLine)) break
-      if (nextLine.startsWith('|') && nextLine.endsWith('|')) break
-      if (nextLine.startsWith('<table')) break
-      if (/^(-{3,}|\*{3,}|_{3,})$/.test(nextLine)) break
-      if (nextLine.startsWith('```')) break
-      if (/^(\s*[-*+]|\s*\d+\.)\s/.test(lines[j])) break
+      const nextLine = lines[j]
+      const nextTrimmed = nextLine.trim()
+      if (nextTrimmed === '') break
+      if (/^#{1,6}\s/.test(nextTrimmed)) break
+      if (nextTrimmed === '$$') break
+      if (/^!\[.*?\]\(.*?\)/.test(nextTrimmed)) break
+      if (nextTrimmed.startsWith('|') && nextTrimmed.endsWith('|')) break
+      if (nextTrimmed.includes('<table') || nextTrimmed.includes('<tr') || nextTrimmed.includes('<td')) break
+      if (/^(-{3,}|\*{3,}|_{3,})$/.test(nextTrimmed)) break
+      if (nextTrimmed.startsWith('```')) break
+      if (/^(\s*[-*+]|\s*\d+\.)\s/.test(nextLine)) break
       paraLines.push(lines[j])
       j++
     }

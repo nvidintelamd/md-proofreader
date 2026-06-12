@@ -4,8 +4,8 @@ import { parseMdToBlocks } from '../lib/mdParser'
 
 export function useEditMode() {
   const {
-    blocks, rawLines, editRange, mdDir, imageCache,
-    setMode, setEditRange, setBlocks, setRawLines, addImageToCache
+    editRange, mdDir, imageCache,
+    setMode, setEditRange, setBlocks, setRawLines, setCursorBlock, addImageToCache
   } = useAppStore()
 
   const applyEdit = useCallback(async (newText: string) => {
@@ -22,9 +22,14 @@ export function useEditMode() {
 
     setRawLines(updatedRawLines)
 
-    // Re-parse blocks
     const newBlocks = parseMdToBlocks(updatedRawLines.join('\n'))
     setBlocks(newBlocks)
+
+    // Reset cursor to safe position after re-parse
+    const safeCursor = Math.min(editRange.start, newBlocks.length - 1)
+    setCursorBlock(Math.max(0, safeCursor))
+    setMode('normal')
+    setEditRange(null)
 
     // Resolve any new images
     const imageRegex = /!\[.*?\]\((.*?)\)/g
@@ -43,9 +48,6 @@ export function useEditMode() {
         }
       }
     }
-
-    setMode('normal')
-    setEditRange(null)
   }, [editRange, mdDir, imageCache])
 
   const cancelEdit = useCallback(() => {

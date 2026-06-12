@@ -146,12 +146,14 @@ function BlockRenderer({ block, imageCache, mdDir }: {
       )
     }
 
-    case 'table':
+    case 'table': {
+      const isHtml = content.includes('<table') || content.includes('<tr') || content.includes('<td')
       return (
         <div className="my-2 overflow-x-auto">
-          <div dangerouslySetInnerHTML={{ __html: renderSimpleTable(content) }} />
+          <div dangerouslySetInnerHTML={{ __html: isHtml ? content : renderSimpleTable(content) }} />
         </div>
       )
+    }
 
     case 'image': {
       const imgMatch = content.match(/!\[.*?\]\((.*?)\)/)
