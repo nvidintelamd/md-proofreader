@@ -77,16 +77,10 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     state.setCursorLine(idx)
   }, [])
 
-  const handleMouseMove = useCallback((idx: number, e: React.MouseEvent) => {
+  const handleMouseMove = useCallback((idx: number) => {
     const state = useAppStore.getState()
     if (state.isDragging) {
-      // Threshold: select line when mouse enters top 1/5 of the line element
-      const target = e.currentTarget as HTMLElement
-      const rect = target.getBoundingClientRect()
-      const threshold = rect.top + rect.height * 0.2
-      if (e.clientY <= threshold) {
-        state.updateDrag(idx)
-      }
+      state.updateDrag(idx)
 
       // Auto-scroll when near edges
       const container = containerRef.current
@@ -152,9 +146,9 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
           <div
             key={`${currentFileIndex}-${idx}`}
             data-line-index={idx}
-            className={`flex items-start cursor-pointer transition-colors duration-50 hover:bg-gray-50 ${bgClass}`}
+            className={`flex items-start cursor-pointer transition-colors duration-50 ${isSelected ? '' : 'hover:bg-gray-50'} ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
-            onMouseMove={(e) => handleMouseMove(idx, e)}
+            onMouseMove={() => handleMouseMove(idx)}
           >
             <span className="flex-shrink-0 w-12 text-right pr-2 text-[10px] text-gray-400 select-none py-0.5" style={{ marginTop: '2px' }}>
               {idx + 1}
