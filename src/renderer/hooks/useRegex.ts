@@ -6,10 +6,9 @@ export function useRegex() {
     const state = useAppStore.getState()
     const { lines, editRange, pushUndo, setLines, setEditedRange, setCursorLine, setEditRange } = state
 
-    const start = editRange ? editRange.start : 0
-    let end = editRange ? editRange.end : lines.length - 1
+    const rangeStart = editRange ? editRange.start : 0
+    let rangeEnd = editRange ? editRange.end : lines.length - 1
 
-    // Validate regex first
     let re: RegExp
     try {
       re = new RegExp(preset.pattern, 'g')
@@ -18,12 +17,11 @@ export function useRegex() {
       return
     }
 
-    // Convert literal \n in replacement to real newline
     const realReplacement = preset.replacement.replace(/\\n/g, '\n')
 
-    // Count matches first
+    // Count matches
     let matchCount = 0
-    for (let i = start; i <= end; i++) {
+    for (let i = rangeStart; i <= rangeEnd; i++) {
       re.lastIndex = 0
       if (re.test(lines[i])) matchCount++
     }
@@ -33,20 +31,28 @@ export function useRegex() {
       return
     }
 
-    // Push undo
-    pushUndo({ lines: [...lines], range: { start, end } })
+    pushUndo({ lines: [...lines], range: { start: rangeStart, end: rangeEnd } })
 
-    // Apply
+    // Track which lines actually changed
+    let firstChanged = -1
+    let lastChanged = -1
     const newLines = [...lines]
+
     try {
-      for (let i = start; i <= end; i++) {
-        const result = newLines[i].replace(new RegExp(preset.pattern, 'g'), realReplacement)
-        if (result.includes('\n')) {
-          const splitLines = result.split('\n')
-          newLines.splice(i, 1, ...splitLines)
-          end += splitLines.length - 1
-        } else {
-          newLines[i] = result
+      for (let i = rangeStart; i <= rangeEnd; i++) {
+        const original = newLines[i]
+        const result = original.replace(new RegExp(preset.pattern, 'g'), realReplacement)
+        if (result !== original) {
+          if (firstChanged === -1) firstChanged = i
+          lastChanged = i
+          if (result.includes('\n')) {
+            const splitLines = result.split('\n')
+            newLines.splice(i, 1, ...splitLines)
+            rangeEnd += splitLines.length - 1
+            lastChanged = i + splitLines.length - 1
+          } else {
+            newLines[i] = result
+          }
         }
       }
     } catch (err) {
@@ -55,8 +61,11 @@ export function useRegex() {
     }
 
     setLines(newLines)
-    setEditedRange({ start, end })
-    setCursorLine(start)
+    // Only highlight lines that actually changed
+    if (firstChanged !== -1) {
+      setEditedRange({ start: firstChanged, end: lastChanged })
+      setCursorLine(firstChanged)
+    }
     setEditRange(null)
   }, [])
 

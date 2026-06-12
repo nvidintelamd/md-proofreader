@@ -50,6 +50,13 @@ function handleNormalMode(e: KeyboardEvent) {
     return
   }
 
+  // ESC: clear selection
+  if (e.key === 'Escape' && editRange) {
+    e.preventDefault()
+    setEditRange(null)
+    return
+  }
+
   // Ctrl+V: paste into selection
   if (e.ctrlKey && e.key === 'v') {
     e.preventDefault()
