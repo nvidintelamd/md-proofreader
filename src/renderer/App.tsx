@@ -62,18 +62,17 @@ export default function App() {
         className="bg-[#3c3c3c] flex items-center h-[30px] px-1 select-none text-xs flex-shrink-0"
         style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
       >
-        {/* Sidebar toggle */}
-        <button
-          onClick={toggleSidebar}
-          className="w-7 h-7 flex items-center justify-center rounded hover:bg-white/10 text-white/70 flex-shrink-0"
-          style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
-          title={sidebarVisible ? '收起侧边栏' : '展开侧边栏'}
-        >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M14 1H2a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V2a1 1 0 00-1-1zM2 0a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V2a2 2 0 00-2-2H2z"/>
-            <path d="M6 4.5h5a.5.5 0 010 1H6a.5.5 0 010-1zm0 3h5a.5.5 0 010 1H6a.5.5 0 010-1zm0 3h5a.5.5 0 010 1H6a.5.5 0 010-1zM3 4.5a.5.5 0 110-1 .5.5 0 010 1zm0 3a.5.5 0 110-1 .5.5 0 010 1zm0 3a.5.5 0 110-1 .5.5 0 010 1z"/>
+        {/* App icon placeholder */}
+        <div className="w-7 h-7 flex items-center justify-center flex-shrink-0">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-white/40">
+            <circle cx="12" cy="12" r="10" />
+            <circle cx="12" cy="12" r="4" />
+            <line x1="12" y1="2" x2="12" y2="6" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+            <line x1="2" y1="12" x2="6" y2="12" />
+            <line x1="18" y1="12" x2="22" y2="12" />
           </svg>
-        </button>
+        </div>
 
         {/* Menu items */}
         <MenuBarItem
