@@ -14,20 +14,22 @@ export default function App() {
   const files = useAppStore(s => s.files)
   const currentFileIndex = useAppStore(s => s.currentFileIndex)
   const mode = useAppStore(s => s.mode)
+  const sidebarVisible = useAppStore(s => s.sidebarVisible)
+  const toggleSidebar = useAppStore(s => s.toggleSidebar)
 
   const { loadFiles, loadFileContent } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
   const { completeCurrentAndNext, isAllDone } = useProofreadState()
 
-  const [fileMenuOpen, setFileMenuOpen] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const menuBarRef = useRef<HTMLDivElement>(null)
 
   useKeyboardNav()
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setFileMenuOpen(false)
+      if (menuBarRef.current && !menuBarRef.current.contains(e.target as Node)) {
+        setOpenMenu(null)
       }
     }
     window.addEventListener('mousedown', handleClick)
@@ -46,7 +48,7 @@ export default function App() {
   }, [loadFileContent])
 
   const handleOpenFiles = useCallback(async () => {
-    setFileMenuOpen(false)
+    setOpenMenu(null)
     await loadFiles()
   }, [loadFiles])
 
@@ -54,47 +56,71 @@ export default function App() {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
-      {/* Menu bar */}
-      <header className="bg-white border-b flex items-center h-9 px-2 shadow-sm z-50 select-none">
-        {/* File menu */}
-        <div className="relative" ref={menuRef}>
-          <button
-            className="px-2.5 py-1 text-xs text-gray-600 hover:bg-gray-100 rounded"
-            onClick={() => setFileMenuOpen(!fileMenuOpen)}
-          >
-            File
-          </button>
-          {fileMenuOpen && (
-            <div className="absolute top-full left-0 mt-0.5 bg-white border rounded shadow-lg py-1 w-44 z-50">
-              <button
-                className="w-full text-left px-4 py-1.5 text-xs hover:bg-gray-100"
-                onClick={handleOpenFiles}
-              >
-                打开MD文件
-              </button>
-            </div>
-          )}
-        </div>
+      {/* Single-row menu bar */}
+      <div
+        ref={menuBarRef}
+        className="bg-white border-b flex items-center h-8 px-1 shadow-sm z-50 select-none text-xs"
+      >
+        {/* Sidebar toggle */}
+        <button
+          onClick={toggleSidebar}
+          className="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500 flex-shrink-0"
+          title={sidebarVisible ? '收起侧边栏' : '展开侧边栏'}
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M14 1H2a1 1 0 00-1 1v12a1 1 0 001 1h12a1 1 0 001-1V2a1 1 0 00-1-1zM2 0a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V2a2 2 0 00-2-2H2z"/>
+            <path d="M6 4.5h5a.5.5 0 010 1H6a.5.5 0 010-1zm0 3h5a.5.5 0 010 1H6a.5.5 0 010-1zm0 3h5a.5.5 0 010 1H6a.5.5 0 010-1zM3 4.5a.5.5 0 110-1 .5.5 0 010 1zm0 3a.5.5 0 110-1 .5.5 0 010 1zm0 3a.5.5 0 110-1 .5.5 0 010 1z"/>
+          </svg>
+        </button>
 
-        {/* Complete button (next to menu) */}
+        {/* Menu items */}
+        <MenuBarItem
+          label="文件(F)"
+          isOpen={openMenu === '文件'}
+          onClick={() => setOpenMenu(openMenu === '文件' ? null : '文件')}
+          onMouseEnter={() => { if (openMenu) setOpenMenu('文件') }}
+        >
+          <MenuItem label="打开MD文件" shortcut="Ctrl+O" onClick={handleOpenFiles} />
+        </MenuBarItem>
+
+        <MenuBarItem
+          label="编辑(E)"
+          isOpen={openMenu === '编辑'}
+          onClick={() => setOpenMenu(openMenu === '编辑' ? null : '编辑')}
+          onMouseEnter={() => { if (openMenu) setOpenMenu('编辑') }}
+        >
+          <MenuItem label="撤销" shortcut="Ctrl+Z" onClick={() => document.execCommand('undo')} />
+          <MenuItem label="重做" shortcut="Ctrl+Y" onClick={() => document.execCommand('redo')} />
+        </MenuBarItem>
+
+        <MenuBarItem
+          label="查看(V)"
+          isOpen={openMenu === '查看'}
+          onClick={() => setOpenMenu(openMenu === '查看' ? null : '查看')}
+          onMouseEnter={() => { if (openMenu) setOpenMenu('查看') }}
+        >
+          <MenuItem label="重新加载" shortcut="Ctrl+R" onClick={() => window.location.reload()} />
+        </MenuBarItem>
+
+        {/* Complete button — direct, no dropdown */}
         {files.length > 0 && (
           <button
             onClick={completeCurrentAndNext}
             disabled={isAllDone()}
-            className={`ml-2 px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            className={`ml-1 px-2.5 py-1 rounded transition-colors ${
               isAllDone()
-                ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                : 'bg-green-600 text-white hover:bg-green-700'
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-green-700 hover:bg-green-50 font-medium'
             }`}
           >
             {isAllDone() ? '全部完成 ✓' : '完成本篇校对'}
           </button>
         )}
 
-        {/* Centered filename */}
-        <div className="flex-1 text-center">
+        {/* Right-aligned filename */}
+        <div className="flex-1 text-right pr-2">
           {currentFileName && (
-            <span className="text-xs text-gray-500">
+            <span className="text-gray-400">
               {currentFileName}
               {files.length > 1 && (
                 <span className="text-gray-300 ml-1">({currentFileIndex + 1}/{files.length})</span>
@@ -102,10 +128,7 @@ export default function App() {
             </span>
           )}
         </div>
-
-        {/* Right spacer to balance layout */}
-        <div style={{ width: '120px' }} />
-      </header>
+      </div>
 
       {/* Main content */}
       <div className="flex-1 flex overflow-hidden">
@@ -123,5 +146,46 @@ export default function App() {
         <EditModal onSave={applyEdit} onCancel={cancelEdit} />
       )}
     </div>
+  )
+}
+
+function MenuBarItem({ label, isOpen, onClick, onMouseEnter, children }: {
+  label: string
+  isOpen: boolean
+  onClick: () => void
+  onMouseEnter: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <div className="relative">
+      <button
+        className={`px-2 py-1 rounded ${isOpen ? 'bg-gray-100' : 'hover:bg-gray-50'} text-gray-600`}
+        onClick={onClick}
+        onMouseEnter={onMouseEnter}
+      >
+        {label}
+      </button>
+      {isOpen && (
+        <div className="absolute top-full left-0 mt-0 bg-white border rounded shadow-lg py-1 min-w-[180px] z-50">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function MenuItem({ label, shortcut, onClick }: {
+  label: string
+  shortcut?: string
+  onClick: () => void
+}) {
+  return (
+    <button
+      className="w-full text-left px-4 py-1.5 hover:bg-gray-100 flex items-center justify-between gap-4"
+      onClick={onClick}
+    >
+      <span>{label}</span>
+      {shortcut && <span className="text-gray-400 text-[10px]">{shortcut}</span>}
+    </button>
   )
 }

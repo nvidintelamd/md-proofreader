@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, stat } from 'fs/promises'
 
@@ -19,6 +19,9 @@ function createWindow(): void {
   })
 
   // In dev mode, load from vite dev server
+  // Hide native menu bar — custom menu bar in renderer
+  Menu.setApplicationMenu(null)
+
   if (process.env['ELECTRON_RENDERER_URL']) {
     mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
