@@ -1,5 +1,6 @@
 import React from 'react'
 import { useAppStore } from '../store/appStore'
+import { useRegex } from '../hooks/useRegex'
 
 export function StatusBar() {
   const files = useAppStore(s => s.files)
@@ -8,6 +9,10 @@ export function StatusBar() {
   const lines = useAppStore(s => s.lines)
   const mode = useAppStore(s => s.mode)
   const editRange = useAppStore(s => s.editRange)
+  const regexPresets = useAppStore(s => s.regexPresets)
+  const setShowRegexPanel = useAppStore(s => s.setShowRegexPanel)
+
+  const { applyRegex } = useRegex()
 
   const currentFile = files[currentFileIndex]
   const progress = files.length > 0
@@ -27,7 +32,7 @@ export function StatusBar() {
   }[mode]
 
   return (
-    <div className="h-6 bg-gray-800 text-gray-300 flex items-center px-4 text-[11px] gap-4 select-none">
+    <div className="h-6 bg-gray-800 text-gray-300 flex items-center px-4 text-[11px] gap-2 select-none">
       <div className="flex items-center gap-2">
         <span className="text-gray-500">文件:</span>
         <span className="text-gray-200">{currentFile?.name || '-'}</span>
@@ -55,6 +60,27 @@ export function StatusBar() {
         {modeText}
       </span>
 
+      {/* + button to open regex panel */}
+      <button
+        onClick={() => setShowRegexPanel(true)}
+        className="w-4 h-4 flex items-center justify-center rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px] font-bold"
+        title="添加正则表达式"
+      >
+        +
+      </button>
+
+      {/* Regex preset buttons */}
+      {regexPresets.map(p => (
+        <button
+          key={p.id}
+          onClick={() => applyRegex(p)}
+          className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px] font-medium"
+          title={`${p.pattern} → ${p.replacement}`}
+        >
+          {p.name}
+        </button>
+      ))}
+
       {editRange && (
         <span className="text-gray-500">
           选区: {editRange.start + 1}-{editRange.end + 1}
@@ -64,7 +90,7 @@ export function StatusBar() {
       <div className="flex-1" />
 
       <div className="text-gray-500">
-        {mode === 'normal' && '拖拽选择 | 双击/v编辑 | Ctrl+V粘贴 | Ctrl+Z撤销'}
+        {mode === 'normal' && '拖拽选择 | v/Enter编辑 | Ctrl+V粘贴 | Ctrl+Z撤销'}
         {mode === 'edit_select' && '点击结束行 | Esc 取消'}
         {mode === 'edit_modal' && '编辑中 | Esc 取消 | Ctrl+S 保存'}
       </div>

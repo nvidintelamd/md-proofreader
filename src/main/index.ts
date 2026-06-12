@@ -37,14 +37,17 @@ function createWindow(): void {
 interface SessionData {
   filePaths: string[]
   proofreadStatus: Record<string, boolean>  // path -> done
+  regexPresets?: { id: string; name: string; pattern: string; replacement: string }[]
 }
 
 async function readSession(): Promise<SessionData> {
   try {
     const content = await readFile(sessionPath, 'utf-8')
-    return JSON.parse(content)
+    const data = JSON.parse(content)
+    if (!data.regexPresets) data.regexPresets = []
+    return data
   } catch {
-    return { filePaths: [], proofreadStatus: {} }
+    return { filePaths: [], proofreadStatus: [], regexPresets: [] }
   }
 }
 

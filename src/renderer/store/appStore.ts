@@ -21,6 +21,13 @@ export interface FileState {
   scrollTop: number
 }
 
+export interface RegexPreset {
+  id: string
+  name: string
+  pattern: string
+  replacement: string
+}
+
 function createFileState(): FileState {
   return { editRange: null, editedRange: null, undoStack: [], cursorLine: 0, scrollTop: 0 }
 }
@@ -50,6 +57,10 @@ interface AppState {
   // Undo — derived from fileState
   undoStack: UndoEntry[]
 
+  // Regex presets
+  regexPresets: RegexPreset[]
+  showRegexPanel: boolean
+
   setFiles: (files: FileItem[]) => void
   setCurrentFileIndex: (index: number) => void
   setMdDir: (dir: string) => void
@@ -69,6 +80,12 @@ interface AppState {
   undo: () => void
 
   setEditedRange: (range: { start: number; end: number } | null) => void
+
+  // Regex
+  setRegexPresets: (presets: RegexPreset[]) => void
+  addRegexPreset: (preset: RegexPreset) => void
+  deleteRegexPreset: (id: string) => void
+  setShowRegexPanel: (show: boolean) => void
 
   // Per-file state management
   saveCurrentFileState: () => void
@@ -101,6 +118,9 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   editedRange: null,
   undoStack: [],
+
+  regexPresets: [],
+  showRegexPanel: false,
 
   setFiles: (files) => set({ files }),
   setCurrentFileIndex: (index) => set({ currentFileIndex: index }),
@@ -162,6 +182,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setEditedRange: (range) => set({ editedRange: range }),
+
+  setRegexPresets: (presets) => set({ regexPresets: presets }),
+  addRegexPreset: (preset) => set({ regexPresets: [...get().regexPresets, preset] }),
+  deleteRegexPreset: (id) => set({ regexPresets: get().regexPresets.filter(p => p.id !== id) }),
+  setShowRegexPanel: (show) => set({ showRegexPanel: show }),
 
   saveCurrentFileState: () => {
     const filePath = getCurrentFilePath(get)

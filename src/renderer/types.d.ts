@@ -1,5 +1,18 @@
 export {}
 
+interface RegexPresetData {
+  id: string
+  name: string
+  pattern: string
+  replacement: string
+}
+
+interface SessionData {
+  filePaths: string[]
+  proofreadStatus: Record<string, boolean>
+  regexPresets?: RegexPresetData[]
+}
+
 declare global {
   interface Window {
     api: {
@@ -8,10 +21,10 @@ declare global {
       writeFile: (path: string, content: string) => Promise<{ success: boolean; error?: string }>
       saveImage: (mdDir: string, fileName: string, base64Data: string) => Promise<{ success: boolean; path?: string; error?: string }>
       readImage: (mdDir: string, imagePath: string) => Promise<{ success: boolean; dataUrl: string }>
-      loadSession: () => Promise<{ filePaths: string[]; proofreadStatus: Record<string, boolean> }>
-      saveSession: (data: { filePaths: string[]; proofreadStatus: Record<string, boolean> }) => Promise<void>
-      markDone: (filePath: string) => Promise<{ filePaths: string[]; proofreadStatus: Record<string, boolean> }>
-      resetFile: (filePath: string) => Promise<{ filePaths: string[]; proofreadStatus: Record<string, boolean> }>
+      loadSession: () => Promise<SessionData>
+      saveSession: (data: SessionData) => Promise<void>
+      markDone: (filePath: string) => Promise<SessionData>
+      resetFile: (filePath: string) => Promise<SessionData>
       minimizeWindow: () => void
       maximizeWindow: () => void
       closeWindow: () => void

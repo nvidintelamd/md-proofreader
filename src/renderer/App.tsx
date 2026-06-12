@@ -9,6 +9,7 @@ import { PreviewArea } from './components/PreviewArea'
 import { EditModal } from './components/EditModal'
 import { StatusBar } from './components/StatusBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import { RegexPanel } from './components/RegexPanel'
 
 export default function App() {
   const files = useAppStore(s => s.files)
@@ -16,6 +17,9 @@ export default function App() {
   const mode = useAppStore(s => s.mode)
   const sidebarVisible = useAppStore(s => s.sidebarVisible)
   const toggleSidebar = useAppStore(s => s.toggleSidebar)
+  const showRegexPanel = useAppStore(s => s.showRegexPanel)
+  const regexPresets = useAppStore(s => s.regexPresets)
+  const setRegexPresets = useAppStore(s => s.setRegexPresets)
 
   const { loadFiles, loadFileContent, loadLastSession } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
@@ -28,8 +32,22 @@ export default function App() {
 
   // Auto-load last session on startup
   useEffect(() => {
-    loadLastSession()
+    loadLastSession().then(async () => {
+      const session = await window.api.loadSession()
+      if (session.regexPresets) {
+        setRegexPresets(session.regexPresets)
+      }
+    })
   }, [])
+
+  // Save regex presets when they change
+  useEffect(() => {
+    if (regexPresets.length > 0 || true) {
+      window.api.loadSession().then(session => {
+        window.api.saveSession({ ...session, regexPresets })
+      })
+    }
+  }, [regexPresets])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -198,6 +216,8 @@ export default function App() {
       {mode === 'edit_modal' && (
         <EditModal onSave={applyEdit} onCancel={cancelEdit} />
       )}
+
+      {showRegexPanel && <RegexPanel />}
     </div>
   )
 }
