@@ -292,14 +292,38 @@ function renderTableWithMath(html: string, imageCache: Map<string, string>, mdDi
 
 function renderTextSegment(text: string): string {
   if (!text) return ''
-  let result = text
+
+  // Split by math expressions FIRST, then escape the non-math parts
+  const parts: string[] = []
+  let remaining = text
+
+  // Process block math $$...$$
+  remaining = remaining.replace(/\$\$([\s\S]*?)\$\$/g, (_match, math) => {
+    const placeholder = `__MATH_BLOCK_${parts.length}__`
+    parts.push(renderMathString(math.trim(), true))
+    return placeholder
+  })
+
+  // Process inline math $...$
+  remaining = remaining.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
+    const placeholder = `__MATH_INLINE_${parts.length}__`
+    parts.push(renderMathString(math.trim(), false))
+    return placeholder
+  })
+
+  // Escape HTML on the remaining (non-math) text
+  let result = remaining
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 
+  // Bold
   result = result.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
-  result = result.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
-    return renderMathString(math, false)
+
+  // Restore math placeholders
+  parts.forEach((html, i) => {
+    result = result.replace(`__MATH_BLOCK_${i}__`, html)
+    result = result.replace(`__MATH_INLINE_${i}__`, html)
   })
 
   return result
