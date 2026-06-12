@@ -39,6 +39,17 @@ function handleNormalMode(e: KeyboardEvent) {
     return
   }
 
+  // Ctrl+S: save current file
+  if (e.ctrlKey && e.key === 's') {
+    e.preventDefault()
+    const { files, currentFileIndex, lines } = useAppStore.getState()
+    const filePath = files[currentFileIndex]?.path
+    if (filePath) {
+      window.api.writeFile(filePath, lines.join('\n'))
+    }
+    return
+  }
+
   // Ctrl+V: paste into selection
   if (e.ctrlKey && e.key === 'v') {
     e.preventDefault()

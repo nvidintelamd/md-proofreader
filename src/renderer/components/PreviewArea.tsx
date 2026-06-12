@@ -146,7 +146,7 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
           <div
             key={`${currentFileIndex}-${idx}`}
             data-line-index={idx}
-            className={`flex items-start cursor-pointer ${isDragging ? '' : 'transition-colors duration-50 hover:bg-gray-50'} ${bgClass}`}
+            className={`flex items-start cursor-pointer ${isDragging || isSelected ? '' : 'transition-colors duration-50 hover:bg-gray-50'} ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
             onMouseMove={() => handleMouseMove(idx)}
           >
