@@ -7,6 +7,7 @@ export function useKeyboardNav() {
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (e.target instanceof HTMLTextAreaElement) return
+    if (e.target instanceof HTMLInputElement) return
     const { mode } = useAppStore.getState()
     if (mode === 'edit_modal') return
 
