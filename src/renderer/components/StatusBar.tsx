@@ -19,17 +19,31 @@ export function StatusBar() {
     ? `${files.filter(f => f.done).length}/${files.length}`
     : '0/0'
 
-  const modeText = {
-    normal: '普通',
-    edit_select: '选择',
-    edit_modal: '编辑'
-  }[mode]
-
+  const modeText = { normal: '普通', edit_select: '选择', edit_modal: '编辑' }[mode]
   const modeColor = {
     normal: 'bg-gray-700 text-gray-300',
     edit_select: 'bg-yellow-800 text-yellow-200',
     edit_modal: 'bg-blue-800 text-blue-200'
   }[mode]
+
+  const handleCopySelection = () => {
+    const state = useAppStore.getState()
+    const { lines, editRange } = state
+    const start = editRange ? editRange.start : 0
+    const end = editRange ? editRange.end : lines.length - 1
+    const text = lines.slice(start, end + 1).join('\n')
+    navigator.clipboard.writeText(text)
+  }
+
+  const handleRegexRightClick = (e: React.MouseEvent, preset: any) => {
+    e.preventDefault()
+    setShowRegexPanel(true)
+    // Trigger edit by setting editingId via a small delay
+    setTimeout(() => {
+      const event = new CustomEvent('regex-edit', { detail: preset })
+      window.dispatchEvent(event)
+    }, 100)
+  }
 
   return (
     <div className="h-6 bg-gray-800 text-gray-300 flex items-center px-4 text-[11px] gap-2 select-none">
@@ -37,58 +51,47 @@ export function StatusBar() {
         <span className="text-gray-500">文件:</span>
         <span className="text-gray-200">{currentFile?.name || '-'}</span>
       </div>
-
       <div className="h-3 w-px bg-gray-600" />
-
       <div className="flex items-center gap-2">
         <span className="text-gray-500">进度:</span>
         <span className="text-gray-200">{progress}</span>
       </div>
-
       <div className="h-3 w-px bg-gray-600" />
-
       <div className="flex items-center gap-2">
         <span className="text-gray-500">行:</span>
-        <span className="text-gray-200">
-          {lines.length > 0 ? `${cursorLine + 1}/${lines.length}` : '-'}
-        </span>
+        <span className="text-gray-200">{lines.length > 0 ? `${cursorLine + 1}/${lines.length}` : '-'}</span>
       </div>
-
       <div className="h-3 w-px bg-gray-600" />
+      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${modeColor}`}>{modeText}</span>
 
-      <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${modeColor}`}>
-        {modeText}
-      </span>
-
-      {/* + button to open regex panel */}
-      <button
-        onClick={() => setShowRegexPanel(true)}
+      {/* + button */}
+      <button onClick={() => setShowRegexPanel(true)}
         className="w-4 h-4 flex items-center justify-center rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px] font-bold"
-        title="添加正则表达式"
-      >
-        +
-      </button>
+        title="管理正则表达式">+</button>
+
+      {/* Copy selection button */}
+      <button onClick={handleCopySelection}
+        className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px]"
+        title="复制选区/全文到剪贴板（可粘贴给AI写正则）">复制</button>
 
       {/* Regex preset buttons */}
       {regexPresets.map(p => (
         <button
           key={p.id}
           onClick={() => applyRegex(p)}
+          onContextMenu={(e) => handleRegexRightClick(e, p)}
           className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px] font-medium"
-          title={`${p.pattern} → ${p.replacement}`}
+          title={`左键执行 | 右键编辑\n${p.pattern} → ${p.replacement}`}
         >
           {p.name}
         </button>
       ))}
 
       {editRange && (
-        <span className="text-gray-500">
-          选区: {editRange.start + 1}-{editRange.end + 1}
-        </span>
+        <span className="text-gray-500">选区: {editRange.start + 1}-{editRange.end + 1}</span>
       )}
 
       <div className="flex-1" />
-
       <div className="text-gray-500">
         {mode === 'normal' && '拖拽选择 | v/Enter编辑 | Ctrl+V粘贴 | Ctrl+Z撤销'}
         {mode === 'edit_select' && '点击结束行 | Esc 取消'}

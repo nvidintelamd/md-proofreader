@@ -85,6 +85,7 @@ interface AppState {
   setRegexPresets: (presets: RegexPreset[]) => void
   addRegexPreset: (preset: RegexPreset) => void
   deleteRegexPreset: (id: string) => void
+  updateRegexPreset: (id: string, data: Partial<Omit<RegexPreset, 'id'>>) => void
   setShowRegexPanel: (show: boolean) => void
 
   // Per-file state management
@@ -186,6 +187,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   setRegexPresets: (presets) => set({ regexPresets: presets }),
   addRegexPreset: (preset) => set({ regexPresets: [...get().regexPresets, preset] }),
   deleteRegexPreset: (id) => set({ regexPresets: get().regexPresets.filter(p => p.id !== id) }),
+  updateRegexPreset: (id, data) => set({
+    regexPresets: get().regexPresets.map(p => p.id === id ? { ...p, ...data } : p)
+  }),
   setShowRegexPanel: (show) => set({ showRegexPanel: show }),
 
   saveCurrentFileState: () => {
