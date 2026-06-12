@@ -86,7 +86,14 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       lastMouseY.current = e.clientY
     }
+
+    const handleGlobalMouseUp = () => {
+      const state = useAppStore.getState()
+      if (state.isDragging) state.endDrag()
+    }
+
     window.addEventListener('mousemove', handleGlobalMouseMove)
+    window.addEventListener('mouseup', handleGlobalMouseUp)
 
     let rafId: number
     const poll = () => {
@@ -98,24 +105,43 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
 
       const containerRect = container.getBoundingClientRect()
       const mouseY = lastMouseY.current
-
-      // Find line element under cursor
       const lineEls = container.querySelectorAll('[data-line-index]')
+
+      // Find line under cursor
+      let found = false
       for (let i = 0; i < lineEls.length; i++) {
         const el = lineEls[i] as HTMLElement
         const rect = el.getBoundingClientRect()
         if (mouseY >= rect.top && mouseY < rect.bottom) {
           const idx = parseInt(el.getAttribute('data-line-index') || '0')
           if (!isNaN(idx)) state.updateDrag(idx)
+          found = true
           break
         }
       }
 
+      // If cursor is above all lines, select first visible
+      if (!found && mouseY < containerRect.top) {
+        if (lineEls.length > 0) {
+          const idx = parseInt((lineEls[0] as HTMLElement).getAttribute('data-line-index') || '0')
+          if (!isNaN(idx)) state.updateDrag(idx)
+        }
+      }
+
+      // If cursor is below all lines, select last visible
+      if (!found && mouseY > containerRect.bottom) {
+        if (lineEls.length > 0) {
+          const last = lineEls.length - 1
+          const idx = parseInt((lineEls[last] as HTMLElement).getAttribute('data-line-index') || '0')
+          if (!isNaN(idx)) state.updateDrag(idx)
+        }
+      }
+
       // Auto-scroll
-      if (mouseY > containerRect.bottom - 40) {
-        container.scrollTop += 12
-      } else if (mouseY < containerRect.top + 40) {
-        container.scrollTop -= 12
+      if (mouseY > containerRect.bottom - 20) {
+        container.scrollTop += 16
+      } else if (mouseY < containerRect.top + 20) {
+        container.scrollTop -= 16
       }
 
       rafId = requestAnimationFrame(poll)
@@ -125,6 +151,7 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     return () => {
       cancelAnimationFrame(rafId)
       window.removeEventListener('mousemove', handleGlobalMouseMove)
+      window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
   }, [isDragging])
 
@@ -152,8 +179,6 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
       ref={containerRef}
       className="flex-1 overflow-y-auto select-none"
       onScroll={handleScroll}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
     >
       {mode === 'edit_select' && (
         <div className="sticky top-0 z-10 bg-yellow-100 text-yellow-800 text-xs text-center py-1">
