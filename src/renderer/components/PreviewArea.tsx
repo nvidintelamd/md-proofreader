@@ -77,27 +77,56 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     state.setCursorLine(idx)
   }, [])
 
-  const handleMouseMove = useCallback((idx: number) => {
-    const state = useAppStore.getState()
-    if (state.isDragging) {
-      state.updateDrag(idx)
+  // Drag polling: continuously detect line under cursor during drag
+  const lastMouseY = useRef<number>(0)
 
-      // Auto-scroll when near edges
+  useEffect(() => {
+    if (!isDragging) return
+
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      lastMouseY.current = e.clientY
+    }
+    window.addEventListener('mousemove', handleGlobalMouseMove)
+
+    let rafId: number
+    const poll = () => {
+      const state = useAppStore.getState()
+      if (!state.isDragging) return
+
       const container = containerRef.current
-      if (container) {
-        const el = container.querySelector(`[data-line-index="${idx}"]`)
-        if (el) {
-          const elRect = el.getBoundingClientRect()
-          const cRect = container.getBoundingClientRect()
-          if (elRect.bottom > cRect.bottom - 40) {
-            container.scrollTop += 20
-          } else if (elRect.top < cRect.top + 40) {
-            container.scrollTop -= 20
-          }
+      if (!container) { rafId = requestAnimationFrame(poll); return }
+
+      const containerRect = container.getBoundingClientRect()
+      const mouseY = lastMouseY.current
+
+      // Find line element under cursor
+      const lineEls = container.querySelectorAll('[data-line-index]')
+      for (let i = 0; i < lineEls.length; i++) {
+        const el = lineEls[i] as HTMLElement
+        const rect = el.getBoundingClientRect()
+        if (mouseY >= rect.top && mouseY < rect.bottom) {
+          const idx = parseInt(el.getAttribute('data-line-index') || '0')
+          if (!isNaN(idx)) state.updateDrag(idx)
+          break
         }
       }
+
+      // Auto-scroll
+      if (mouseY > containerRect.bottom - 40) {
+        container.scrollTop += 12
+      } else if (mouseY < containerRect.top + 40) {
+        container.scrollTop -= 12
+      }
+
+      rafId = requestAnimationFrame(poll)
     }
-  }, [])
+    rafId = requestAnimationFrame(poll)
+
+    return () => {
+      cancelAnimationFrame(rafId)
+      window.removeEventListener('mousemove', handleGlobalMouseMove)
+    }
+  }, [isDragging])
 
   const handleMouseUp = useCallback(() => {
     const state = useAppStore.getState()
@@ -149,7 +178,6 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
             data-line-index={idx}
             className={`flex items-start cursor-pointer transition-colors duration-50 ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
-            onMouseMove={() => handleMouseMove(idx)}
           >
             <span className="flex-shrink-0 w-12 text-right pr-2 text-[10px] text-gray-400 select-none py-0.5" style={{ marginTop: '2px' }}>
               {idx + 1}
