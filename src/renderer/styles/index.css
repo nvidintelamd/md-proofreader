@@ -31,3 +31,38 @@ body {
 *::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Table styles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 4px 0;
+  font-size: 0.8rem;
+}
+
+table th, table td {
+  border: 1px solid #d1d5db;
+  padding: 4px 6px;
+  text-align: left;
+}
+
+table th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+table td {
+  background-color: #fff;
+}
+
+/* Inline math */
+.inline-math {
+  display: inline;
+}
+
+/* Block math */
+.block-math {
+  display: block;
+  text-align: center;
+  margin: 4px 0;
+}

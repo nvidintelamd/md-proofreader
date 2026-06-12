@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useCallback, useMemo } from 'react'
 import { useAppStore } from '../store/appStore'
 import { renderMathString } from '../lib/katexSetup'
 
-export function PreviewArea() {
+export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
   const lines = useAppStore(s => s.lines)
   const cursorLine = useAppStore(s => s.cursorLine)
   const mode = useAppStore(s => s.mode)
@@ -64,11 +64,7 @@ export function PreviewArea() {
   }, [])
 
   if (lines.length === 0) {
-    return (
-      <div className="flex-1 flex items-center justify-center text-gray-400 text-sm">
-        请从左侧选择文件
-      </div>
-    )
+    return <WelcomePage onOpenFiles={onOpenFiles} />
   }
 
   return (
@@ -117,6 +113,25 @@ export function PreviewArea() {
   )
 }
 
+function WelcomePage({ onOpenFiles }: { onOpenFiles?: () => void }) {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center text-gray-400 select-none">
+      <div className="text-6xl mb-6 opacity-30">📝</div>
+      <h2 className="text-xl font-semibold text-gray-500 mb-2">MD校对工具</h2>
+      <p className="text-sm text-gray-400 mb-6">打开 Markdown 文件开始校对</p>
+      <button
+        onClick={onOpenFiles}
+        className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
+      >
+        打开MD文件
+      </button>
+      <div className="mt-8 text-xs text-gray-300 space-y-1 text-center">
+        <p>hjkl 移动 | v 选择编辑 | PgUp/PgDn 翻页</p>
+      </div>
+    </div>
+  )
+}
+
 function SafeLineContent(props: {
   line: string
   lineIndex: number
@@ -151,6 +166,11 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
     )
   }
 
+  // Check for HTML table — render with LaTeX processing in cells
+  if (line.includes('<table') || line.includes('<tr') || line.includes('<td') || line.includes('</table>')) {
+    return <div dangerouslySetInnerHTML={{ __html: renderTableWithMath(line) }} />
+  }
+
   // Split by inline images
   const imgRegex = /!\[.*?\]\((.*?)\)/g
   const parts: React.ReactNode[] = []
@@ -180,10 +200,6 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
 
   const remaining = line.substring(lastIdx)
 
-  if (remaining.includes('<table') || remaining.includes('<tr') || remaining.includes('<td')) {
-    return <div dangerouslySetInnerHTML={{ __html: remaining }} />
-  }
-
   const hMatch = remaining.match(/^(#+)\s(.*)/)
   if (hMatch) {
     return (
@@ -202,18 +218,25 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
   return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} />
 }
 
+function renderTableWithMath(html: string): string {
+  // Process table cells for LaTeX: replace $...$ and $$...$$ inside <td>...</td> and <th>...</th>
+  return html.replace(/(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/g, (_match, openTag, content, closeTag) => {
+    const processed = content
+      .replace(/\$\$([\s\S]*?)\$\$/g, (_m: string, math: string) => renderMathString(math.trim(), true))
+      .replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_m: string, math: string) => renderMathString(math.trim(), false))
+    return openTag + processed + closeTag
+  })
+}
+
 function renderTextSegment(text: string): string {
   if (!text) return ''
-  // Escape HTML first to prevent XSS from user content
   let result = text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 
-  // Bold **text** — must run before math since math may contain **
   result = result.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
 
-  // Inline math $...$ (not $$) — render via KaTeX
   result = result.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
     return renderMathString(math, false)
   })
