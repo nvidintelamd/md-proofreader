@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 import { useAppStore } from '../store/appStore'
+import { textToLines } from '../lib/textUtils'
 
 export function useEditMode() {
   const editRange = useAppStore(s => s.editRange)
@@ -11,12 +12,9 @@ export function useEditMode() {
 
     const { lines, setLines, setCursorLine, setMode, setEditRange, addImageToCache, pushUndo, setEditedRange } = useAppStore.getState()
 
-    // Push undo before modifying
     pushUndo({ lines: [...lines], range: editRange })
 
-    // Convert literal \n to real newlines, then split
-    const processedText = newText.replace(/\\n/g, '\n')
-    const newLines = processedText.split('\n')
+    const newLines = textToLines(newText)
     const before = lines.slice(0, editRange.start)
     const after = lines.slice(editRange.end + 1)
     const updatedLines = [...before, ...newLines, ...after]
@@ -32,7 +30,7 @@ export function useEditMode() {
     // Resolve any new images
     const imageRegex = /!\[.*?\]\((.*?)\)/g
     let match
-    while ((match = imageRegex.exec(processedText)) !== null) {
+    while ((match = imageRegex.exec(newText)) !== null) {
       const imgPath = match[1].trim()
       if (imgPath) {
         const cacheKey = `${mdDir}::${imgPath}`
