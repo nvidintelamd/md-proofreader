@@ -9,7 +9,7 @@ import { PreviewArea } from './components/PreviewArea'
 import { EditModal } from './components/EditModal'
 import { StatusBar } from './components/StatusBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { RegexPanel } from './components/RegexPanel'
+import { FindReplaceWidget } from './components/FindReplaceWidget'
 
 export default function App() {
   const files = useAppStore(s => s.files)
@@ -217,7 +217,7 @@ export default function App() {
         <EditModal onSave={applyEdit} onCancel={cancelEdit} />
       )}
 
-      {showRegexPanel && <RegexPanel />}
+      {showRegexPanel && <FindReplaceWidget />}
     </div>
   )
 }
