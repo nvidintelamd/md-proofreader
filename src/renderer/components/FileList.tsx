@@ -10,6 +10,7 @@ export function FileList({ onFileSelect }: Props) {
   const currentFileIndex = useAppStore(s => s.currentFileIndex)
   const sidebarVisible = useAppStore(s => s.sidebarVisible)
   const toggleSidebar = useAppStore(s => s.toggleSidebar)
+  const isDirty = useAppStore(s => s.isDirty)
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; filePath: string } | null>(null)
   const contextRef = useRef<HTMLDivElement>(null)
 
@@ -83,6 +84,9 @@ export function FileList({ onFileSelect }: Props) {
                 {file.done ? '✓' : ''}
               </span>
               <span className="truncate flex-1">{file.name}</span>
+              {isDirty && index === currentFileIndex && (
+                <span className="w-2 h-2 rounded-full bg-gray-500 flex-shrink-0" />
+              )}
             </div>
           ))
         )}

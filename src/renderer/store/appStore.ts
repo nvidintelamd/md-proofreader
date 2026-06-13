@@ -61,10 +61,16 @@ interface AppState {
   regexPresets: RegexPreset[]
   showRegexPanel: boolean
 
+  // Dirty state & save toast
+  isDirty: boolean
+  showSaveToast: boolean
+
   setFiles: (files: FileItem[]) => void
   setCurrentFileIndex: (index: number) => void
   setMdDir: (dir: string) => void
   setLines: (lines: string[]) => void
+  setIsDirty: (dirty: boolean) => void
+  triggerSaveToast: () => void
   setCursorLine: (index: number) => void
   setMode: (mode: Mode) => void
   setEditRange: (range: { start: number; end: number } | null) => void
@@ -123,10 +129,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   regexPresets: [],
   showRegexPanel: false,
 
+  isDirty: false,
+  showSaveToast: false,
+
   setFiles: (files) => set({ files }),
   setCurrentFileIndex: (index) => set({ currentFileIndex: index }),
   setMdDir: (dir) => set({ mdDir: dir }),
-  setLines: (lines) => set({ lines }),
+  setLines: (lines) => set({ lines, isDirty: true }),
+  setIsDirty: (dirty) => set({ isDirty: dirty }),
+  triggerSaveToast: () => {
+    set({ showSaveToast: true })
+    setTimeout(() => set({ showSaveToast: false }), 2000)
+  },
   setCursorLine: (index) => {
     const { lines } = get()
     const clamped = Math.max(0, Math.min(index, lines.length - 1))

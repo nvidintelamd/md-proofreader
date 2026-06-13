@@ -27,21 +27,17 @@ export function StatusBar() {
   }[mode]
 
   const handleCopySelection = () => {
-    const state = useAppStore.getState()
-    const { lines, editRange } = state
+    const { lines, editRange } = useAppStore.getState()
     const start = editRange ? editRange.start : 0
     const end = editRange ? editRange.end : lines.length - 1
-    const text = lines.slice(start, end + 1).join('\n')
-    navigator.clipboard.writeText(text)
+    navigator.clipboard.writeText(lines.slice(start, end + 1).join('\n'))
   }
 
   const handleRegexRightClick = (e: React.MouseEvent, preset: any) => {
     e.preventDefault()
     setShowRegexPanel(true)
-    // Trigger edit by setting editingId via a small delay
     setTimeout(() => {
-      const event = new CustomEvent('regex-edit', { detail: preset })
-      window.dispatchEvent(event)
+      window.dispatchEvent(new CustomEvent('regex-edit', { detail: preset }))
     }, 100)
   }
 
@@ -74,17 +70,15 @@ export function StatusBar() {
         className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px]"
         title="复制选区/全文到剪贴板（可粘贴给AI写正则）">复制</button>
 
-      {/* Regex preset buttons */}
+      {/* Regex preset buttons — distinct color */}
       {regexPresets.map(p => (
         <button
           key={p.id}
           onClick={() => applyRegex(p)}
           onContextMenu={(e) => handleRegexRightClick(e, p)}
-          className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px] font-medium"
+          className="px-1.5 py-0.5 rounded bg-indigo-700/50 hover:bg-indigo-600/50 text-indigo-300 text-[10px] font-medium border border-indigo-500/30"
           title={`左键执行 | 右键编辑\n${p.pattern} → ${p.replacement}`}
-        >
-          {p.name}
-        </button>
+        >{p.name}</button>
       ))}
 
       {editRange && (

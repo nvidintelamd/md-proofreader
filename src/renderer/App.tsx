@@ -20,6 +20,7 @@ export default function App() {
   const showRegexPanel = useAppStore(s => s.showRegexPanel)
   const regexPresets = useAppStore(s => s.regexPresets)
   const setRegexPresets = useAppStore(s => s.setRegexPresets)
+  const showSaveToast = useAppStore(s => s.showSaveToast)
 
   const { loadFiles, loadFileContent, loadLastSession } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
@@ -218,6 +219,14 @@ export default function App() {
       )}
 
       {showRegexPanel && <FindReplaceWidget />}
+
+      {/* Save toast */}
+      {showSaveToast && (
+        <div className="fixed top-14 left-4 z-[9999] bg-green-700 text-white text-xs px-3 py-1.5 rounded shadow-lg flex items-center gap-2 animate-pulse">
+          <span>✓</span>
+          <span>已保存</span>
+        </div>
+      )}
     </div>
   )
 }
