@@ -48,8 +48,10 @@ export function useRegex() {
           if (result.includes('\n')) {
             const splitLines = result.split('\n')
             newLines.splice(i, 1, ...splitLines)
-            rangeEnd += splitLines.length - 1
             lastChanged = i + splitLines.length - 1
+            // Skip past newly inserted lines
+            i += splitLines.length - 1
+            rangeEnd += splitLines.length - 1
           } else {
             newLines[i] = result
           }
