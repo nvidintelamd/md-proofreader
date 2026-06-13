@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useAppStore, type RegexPreset } from '../store/appStore'
 
 export function FindReplaceWidget() {
+  const lines = useAppStore(s => s.lines)
+  const editRange = useAppStore(s => s.editRange)
   const setShowRegexPanel = useAppStore(s => s.setShowRegexPanel)
   const addRegexPreset = useAppStore(s => s.addRegexPreset)
   const pushUndo = useAppStore(s => s.pushUndo)
@@ -24,14 +26,16 @@ export function FindReplaceWidget() {
     if (!findText.trim()) { setMatchCount(0); setMatchInfo(''); setError(''); return }
     try {
       const re = useRegex ? new RegExp(findText, 'g') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
-      // Always read from store to avoid stale closure
-      const { lines: currentLines, editRange: currentRange } = useAppStore.getState()
-      const rangeStart = currentRange ? currentRange.start : 0
-      const rangeEnd = currentRange ? currentRange.end : currentLines.length - 1
+      const rangeStart = editRange ? editRange.start : 0
+      const rangeEnd = editRange ? editRange.end : lines.length - 1
       let count = 0
+      let firstMatchLine = -1
       for (let i = rangeStart; i <= rangeEnd; i++) {
         re.lastIndex = 0
-        if (re.test(currentLines[i])) count++
+        if (re.test(lines[i])) {
+          count++
+          if (firstMatchLine === -1) firstMatchLine = i
+        }
       }
       setMatchCount(count)
       setMatchInfo(count > 0 ? `${count} 个匹配` : '无匹配')
@@ -41,7 +45,7 @@ export function FindReplaceWidget() {
       setMatchInfo('')
       setError('正则语法错误')
     }
-  }, [findText, useRegex])
+  }, [findText, useRegex, lines, editRange])
 
   useEffect(() => { search() }, [search])
 
@@ -53,14 +57,12 @@ export function FindReplaceWidget() {
       re = useRegex ? new RegExp(findText, 'g') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
     } catch { return }
 
-    // Read from store to avoid stale closure
-    const { lines: currentLines, editRange: currentRange } = useAppStore.getState()
-    const start = currentRange ? currentRange.start : 0
-    let end = currentRange ? currentRange.end : currentLines.length - 1
+    const start = editRange ? editRange.start : 0
+    let end = editRange ? editRange.end : lines.length - 1
 
-    pushUndo({ lines: [...currentLines], range: { start, end } })
+    pushUndo({ lines: [...lines], range: { start, end } })
 
-    const newLines = [...currentLines]
+    const newLines = [...lines]
     const realReplace = replaceText.replace(/\\n/g, '\n')
     let firstChanged = -1
     let lastChanged = -1
