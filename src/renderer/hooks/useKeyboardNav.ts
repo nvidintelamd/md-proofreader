@@ -46,6 +46,7 @@ function handleNormalMode(e: KeyboardEvent) {
     const filePath = files[currentFileIndex]?.path
     if (filePath) {
       window.api.writeFile(filePath, lines.join('\n'))
+      useAppStore.getState().setEditedRange(null)
       useAppStore.getState().setIsDirty(false)
       useAppStore.getState().triggerSaveToast()
     }
