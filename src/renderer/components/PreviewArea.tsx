@@ -68,80 +68,81 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     }
   }, [mode])
 
-  // Mouse drag selection
+  // Mouse interaction: click = select (blue), drag = multi-select (yellow)
+  const mouseDownRef = useRef<{ idx: number; y: number; started: boolean } | null>(null)
+
   const handleMouseDown = useCallback((idx: number, e: React.MouseEvent) => {
     if (e.button !== 0) return
     const state = useAppStore.getState()
     if (state.mode === 'edit_modal') return
-    state.startDrag(idx)
+
+    mouseDownRef.current = { idx, y: e.clientY, started: false }
     state.setCursorLine(idx)
+    state.setEditRange(null)
   }, [])
 
-  // Drag polling: continuously detect line under cursor during drag
+  // Drag polling — runs while mouse is held down
   const lastMouseY = useRef<number>(0)
+  const mouseHeld = useRef(false)
 
   useEffect(() => {
-    if (!isDragging) return
-
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      lastMouseY.current = e.clientY
-    }
-
+    const handleGlobalMouseDown = () => { mouseHeld.current = true }
+    const handleGlobalMouseMove = (e: MouseEvent) => { lastMouseY.current = e.clientY }
     const handleGlobalMouseUp = () => {
       const state = useAppStore.getState()
       if (state.isDragging) state.endDrag()
+      mouseHeld.current = false
+      mouseDownRef.current = null
     }
 
+    window.addEventListener('mousedown', handleGlobalMouseDown)
     window.addEventListener('mousemove', handleGlobalMouseMove)
     window.addEventListener('mouseup', handleGlobalMouseUp)
 
     let rafId: number
     const poll = () => {
-      const state = useAppStore.getState()
-      if (!state.isDragging) return
+      if (!mouseHeld.current) { rafId = requestAnimationFrame(poll); return }
 
+      const state = useAppStore.getState()
       const container = containerRef.current
       if (!container) { rafId = requestAnimationFrame(poll); return }
 
       const containerRect = container.getBoundingClientRect()
       const mouseY = lastMouseY.current
-      const lineEls = container.querySelectorAll('[data-line-index]')
 
-      // Find line under cursor
-      let found = false
-      for (let i = 0; i < lineEls.length; i++) {
-        const el = lineEls[i] as HTMLElement
-        const rect = el.getBoundingClientRect()
-        if (mouseY >= rect.top && mouseY < rect.bottom) {
-          const idx = parseInt(el.getAttribute('data-line-index') || '0')
-          if (!isNaN(idx)) state.updateDrag(idx)
-          found = true
-          break
+      // Check if should start drag (> 5px from mousedown)
+      if (mouseDownRef.current && !mouseDownRef.current.started) {
+        const dy = Math.abs(mouseY - mouseDownRef.current.y)
+        if (dy > 5) {
+          mouseDownRef.current.started = true
+          state.startDrag(mouseDownRef.current.idx)
         }
       }
 
-      // If cursor is above all lines, select first visible
-      if (!found && mouseY < containerRect.top) {
-        if (lineEls.length > 0) {
+      if (state.isDragging) {
+        const lineEls = container.querySelectorAll('[data-line-index]')
+        let found = false
+        for (let i = 0; i < lineEls.length; i++) {
+          const el = lineEls[i] as HTMLElement
+          const rect = el.getBoundingClientRect()
+          if (mouseY >= rect.top && mouseY < rect.bottom) {
+            const idx = parseInt(el.getAttribute('data-line-index') || '0')
+            if (!isNaN(idx)) state.updateDrag(idx)
+            found = true
+            break
+          }
+        }
+        if (!found && mouseY < containerRect.top && lineEls.length > 0) {
           const idx = parseInt((lineEls[0] as HTMLElement).getAttribute('data-line-index') || '0')
           if (!isNaN(idx)) state.updateDrag(idx)
         }
-      }
-
-      // If cursor is below all lines, select last visible
-      if (!found && mouseY > containerRect.bottom) {
-        if (lineEls.length > 0) {
+        if (!found && mouseY > containerRect.bottom && lineEls.length > 0) {
           const last = lineEls.length - 1
           const idx = parseInt((lineEls[last] as HTMLElement).getAttribute('data-line-index') || '0')
           if (!isNaN(idx)) state.updateDrag(idx)
         }
-      }
-
-      // Auto-scroll
-      if (mouseY > containerRect.bottom - 20) {
-        container.scrollTop += 16
-      } else if (mouseY < containerRect.top + 20) {
-        container.scrollTop -= 16
+        if (mouseY > containerRect.bottom - 20) container.scrollTop += 16
+        else if (mouseY < containerRect.top + 20) container.scrollTop -= 16
       }
 
       rafId = requestAnimationFrame(poll)
@@ -150,10 +151,11 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
 
     return () => {
       cancelAnimationFrame(rafId)
+      window.removeEventListener('mousedown', handleGlobalMouseDown)
       window.removeEventListener('mousemove', handleGlobalMouseMove)
       window.removeEventListener('mouseup', handleGlobalMouseUp)
     }
-  }, [isDragging])
+  }, [])
 
   const handleMouseUp = useCallback(() => {
     const state = useAppStore.getState()
