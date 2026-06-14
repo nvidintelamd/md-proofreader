@@ -135,7 +135,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setFiles: (files) => set({ files }),
   setCurrentFileIndex: (index) => set({ currentFileIndex: index }),
   setMdDir: (dir) => set({ mdDir: dir }),
-  setLines: (lines) => set({ lines, isDirty: true }),
+  setLines: (lines) => set({ lines }),
   setIsDirty: (dirty) => set({ isDirty: dirty }),
   triggerSaveToast: () => {
     set({ showSaveToast: true })
@@ -196,7 +196,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     setEditRange(null)
   },
 
-  setEditedRange: (range) => set({ editedRange: range }),
+  setEditedRange: (range) => set({ editedRange: range, isDirty: range !== null }),
 
   setRegexPresets: (presets) => set({ regexPresets: presets }),
   addRegexPreset: (preset) => set({ regexPresets: [...get().regexPresets, preset] }),
@@ -222,7 +222,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       editRange: state.editRange,
       editedRange: state.editedRange,
       undoStack: state.undoStack,
-      cursorLine: state.cursorLine
+      cursorLine: state.cursorLine,
+      isDirty: state.editedRange !== null
     })
   },
 
@@ -234,7 +235,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       editRange: null,
       editedRange: null,
       undoStack: [],
-      cursorLine: 0
+      cursorLine: 0,
+      isDirty: false
     })
   },
 
