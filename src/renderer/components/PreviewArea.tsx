@@ -425,6 +425,38 @@ function LineContent({ line, lineIndex, mathBlocks, mdTableBlocks, imageCache, m
   return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} />
 }
 
+function TableCellStyle({ cell, imageCache, mdDir }: {
+  cell: string
+  imageCache: Map<string, string>
+  mdDir: string
+}) {
+  // Split by image syntax and render inline
+  const imgRegex = /!\[.*?\]\((.*?)\)/g
+  const parts: React.ReactNode[] = []
+  let lastIdx = 0
+  let match
+  let key = 0
+
+  while ((match = imgRegex.exec(cell)) !== null) {
+    if (match.index > lastIdx) {
+      parts.push(<span key={`t${key++}`} dangerouslySetInnerHTML={{ __html: renderTextSegment(cell.substring(lastIdx, match.index)) }} />)
+    }
+    const imgPath = match[1].trim()
+    const cacheKey = `${mdDir}::${imgPath}`
+    const src = imageCache.get(cacheKey) || imgPath
+    parts.push(
+      <img key={`i${key++}`} src={src} alt="" className="inline-block max-w-[120px] max-h-[60px] rounded border border-gray-200 align-middle"
+        onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+    )
+    lastIdx = match.index + match[0].length
+  }
+
+  if (parts.length > 0) {
+    return <>{parts}{lastIdx < cell.length && <span dangerouslySetInnerHTML={{ __html: renderTextSegment(cell.slice(lastIdx)) }} />}</>
+  }
+  return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(cell) }} />
+}
+
 function MdTableRenderer({ startLine, endLine, imageCache, mdDir }: {
   startLine: number
   endLine: number
@@ -457,15 +489,15 @@ function MdTableRenderer({ startLine, endLine, imageCache, mdDir }: {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(1).map((row, ri) => (
-            <tr key={ri}>
-              {row.map((cell, ci) => (
-                <td key={ci} className="border border-gray-300 px-2 py-1">
-                  <span dangerouslySetInnerHTML={{ __html: renderTextSegment(cell) }} />
-                </td>
-              ))}
-            </tr>
-          ))}
+            {rows.slice(1).map((row, ri) => (
+              <tr key={ri}>
+                {row.map((cell, ci) => (
+                  <td key={ci} className="border border-gray-300 px-2 py-1">
+                    <TableCellStyle cell={cell} imageCache={imageCache} mdDir={mdDir} />
+                  </td>
+                ))}
+              </tr>
+            ))}
         </tbody>
       </table>
     </div>
