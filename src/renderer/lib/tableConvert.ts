@@ -21,8 +21,9 @@ export function convertHtmlTablesToMd(text: string): { result: string; converted
         if (/colspan|rowspan/i.test(fullTag)) {
           return _match // Can't convert, return original
         }
-        // Clean cell content: strip HTML tags, trim
+        // Convert <img src=""> to MD image syntax, then strip other tags
         const content = cellMatch[1]
+          .replace(/<img\s+[^>]*src=["']([^"']+)["'][^>]*\/?>/gi, '![]($1)')
           .replace(/<[^>]+>/g, '')
           .replace(/\s+/g, ' ')
           .trim()
