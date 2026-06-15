@@ -46,6 +46,25 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     return blocks
   }, [lines])
 
+  // Detect MD table blocks (consecutive lines starting with |)
+  const mdTableBlocks = useMemo(() => {
+    const blocks: { start: number; end: number }[] = []
+    let tableStart = -1
+    lines.forEach((l, i) => {
+      const trimmed = l.trim()
+      if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
+        if (tableStart === -1) tableStart = i
+      } else {
+        if (tableStart !== -1) {
+          blocks.push({ start: tableStart, end: i - 1 })
+          tableStart = -1
+        }
+      }
+    })
+    if (tableStart !== -1) blocks.push({ start: tableStart, end: lines.length - 1 })
+    return blocks
+  }, [lines])
+
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return
     const container = containerRef.current
@@ -230,6 +249,7 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
                 line={line}
                 lineIndex={idx}
                 mathBlocks={mathBlocks}
+                mdTableBlocks={mdTableBlocks}
                 imageCache={imageCache}
                 mdDir={mdDir}
               />
@@ -264,6 +284,7 @@ function SafeLineContent(props: {
   line: string
   lineIndex: number
   mathBlocks: { start: number; end: number }[]
+  mdTableBlocks: { start: number; end: number }[]
   imageCache: Map<string, string>
   mdDir: string
 }) {
@@ -274,10 +295,11 @@ function SafeLineContent(props: {
   }
 }
 
-function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
+function LineContent({ line, lineIndex, mathBlocks, mdTableBlocks, imageCache, mdDir }: {
   line: string
   lineIndex: number
   mathBlocks: { start: number; end: number }[]
+  mdTableBlocks: { start: number; end: number }[]
   imageCache: Map<string, string>
   mdDir: string
 }) {
@@ -294,6 +316,18 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
     )
   }
 
+  // MD table block rendering
+  const mdTableBlock = mdTableBlocks.find(b => lineIndex >= b.start && lineIndex <= b.end)
+  if (mdTableBlock) {
+    // Only render on first line of the block
+    if (lineIndex === mdTableBlock.start) {
+      return <MdTableRenderer startLine={mdTableBlock.start} endLine={mdTableBlock.end} imageCache={imageCache} mdDir={mdDir} />
+    }
+    // Skip other lines (already rendered)
+    return null
+  }
+
+  // HTML table
   if (line.includes('<table') || line.includes('<tr') || line.includes('<td') || line.includes('</table>')) {
     return <div dangerouslySetInnerHTML={{ __html: renderTableWithMath(line, imageCache, mdDir) }} />
   }
@@ -342,6 +376,56 @@ function LineContent({ line, lineIndex, mathBlocks, imageCache, mdDir }: {
   }
 
   return <span dangerouslySetInnerHTML={{ __html: renderTextSegment(remaining) }} />
+}
+
+function MdTableRenderer({ startLine, endLine, imageCache, mdDir }: {
+  startLine: number
+  endLine: number
+  imageCache: Map<string, string>
+  mdDir: string
+}) {
+  const lines = useAppStore(s => s.lines)
+  const tableLines = lines.slice(startLine, endLine + 1)
+
+  // Parse table rows
+  const rows: string[][] = []
+  let isSeparator = false
+  for (const line of tableLines) {
+    const trimmed = line.trim()
+    if (/^\|[\s:-]+\|$/.test(trimmed)) {
+      isSeparator = true
+      continue
+    }
+    const cells = trimmed.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1)
+    rows.push(cells.map(c => c.trim()))
+  }
+
+  if (rows.length === 0) return null
+
+  return (
+    <div className="my-2 overflow-x-auto">
+      <table className="w-full border-collapse text-xs">
+        <thead>
+          <tr>
+            {rows[0].map((cell, i) => (
+              <th key={i} className="border border-gray-300 px-2 py-1 bg-gray-100 font-semibold text-left">{cell}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.slice(1).map((row, ri) => (
+            <tr key={ri}>
+              {row.map((cell, ci) => (
+                <td key={ci} className="border border-gray-300 px-2 py-1">
+                  <span dangerouslySetInnerHTML={{ __html: renderTextSegment(cell) }} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 function renderTableWithMath(html: string, imageCache: Map<string, string>, mdDir: string): string {
