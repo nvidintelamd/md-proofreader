@@ -215,6 +215,12 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
             data-line-index={idx}
             className={`flex items-start cursor-pointer transition-colors duration-50 ${bgClass}`}
             onMouseDown={(e) => handleMouseDown(idx, e)}
+            onDoubleClick={() => {
+              const state = useAppStore.getState()
+              state.setEditRange({ start: idx, end: idx })
+              state.setCursorLine(idx)
+              state.setMode('edit_modal')
+            }}
           >
             <span className="flex-shrink-0 w-12 text-right pr-2 text-[10px] text-gray-400 select-none py-0.5" style={{ marginTop: '2px' }}>
               {idx + 1}

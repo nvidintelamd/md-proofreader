@@ -17,7 +17,10 @@ export function EditModal({ onSave, onCancel }: Props) {
   useEffect(() => {
     if (editRange) {
       const selectedLines = lines.slice(editRange.start, editRange.end + 1)
-      setText(selectedLines.join('\n'))
+      let content = selectedLines.join('\n')
+      // Auto-beautify HTML tables for readability
+      content = beautifyHtmlTables(content)
+      setText(content)
     }
   }, [editRange, lines])
 
@@ -115,4 +118,26 @@ export function EditModal({ onSave, onCancel }: Props) {
       </div>
     </div>
   )
+}
+
+function beautifyHtmlTables(text: string): string {
+  if (!text.includes('<table') && !text.includes('<tr')) return text
+
+  return text.replace(/(<table[^>]*>)([\s\S]*?)(<\/table>)/gi, (_match, openTag, inner, closeTag) => {
+    let result = openTag + '\n'
+    const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi
+    let rowMatch
+    while ((rowMatch = rowRegex.exec(inner)) !== null) {
+      result += '  <tr>\n'
+      const cellRegex = /(<t[dh][^>]*>)([\s\S]*?)(<\/t[dh]>)/gi
+      let cellMatch
+      while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
+        const cellContent = cellMatch[2].replace(/\s+/g, ' ').trim()
+        result += `    ${cellMatch[1]}${cellContent}${cellMatch[3]}\n`
+      }
+      result += '  </tr>\n'
+    }
+    result += closeTag
+    return result
+  })
 }

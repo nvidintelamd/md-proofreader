@@ -1,6 +1,7 @@
 import React from 'react'
 import { useAppStore } from '../store/appStore'
 import { useRegex } from '../hooks/useRegex'
+import { convertHtmlTablesToMd } from '../lib/tableConvert'
 
 export function StatusBar() {
   const files = useAppStore(s => s.files)
@@ -31,6 +32,30 @@ export function StatusBar() {
     const start = editRange ? editRange.start : 0
     const end = editRange ? editRange.end : lines.length - 1
     navigator.clipboard.writeText(lines.slice(start, end + 1).join('\n'))
+  }
+
+  const handleTableConvert = () => {
+    const { lines, editRange, pushUndo, setLines, setEditedRange, setCursorLine, setEditRange } = useAppStore.getState()
+    const start = editRange ? editRange.start : 0
+    const end = editRange ? editRange.end : lines.length - 1
+
+    const content = lines.slice(start, end + 1).join('\n')
+    const { result, converted } = convertHtmlTablesToMd(content)
+
+    if (converted === 0) {
+      alert('未找到可转换的 HTML 表格（可能是复杂表格或列数不一致）')
+      return
+    }
+
+    pushUndo({ lines: [...lines], range: { start, end } })
+
+    const newLines = [...lines]
+    const resultLines = result.split('\n')
+    newLines.splice(start, end - start + 1, ...resultLines)
+    setLines(newLines)
+    setEditedRange({ start, end: start + resultLines.length - 1 })
+    setCursorLine(start)
+    setEditRange(null)
   }
 
   const handleRegexRightClick = (e: React.MouseEvent, preset: any) => {
@@ -69,6 +94,11 @@ export function StatusBar() {
       <button onClick={handleCopySelection}
         className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px]"
         title="复制选区/全文到剪贴板（可粘贴给AI写正则）">复制</button>
+
+      {/* Table to MD button — fixed, not deletable */}
+      <button onClick={handleTableConvert}
+        className="px-1.5 py-0.5 rounded bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 text-[10px] font-medium border border-emerald-500/30"
+        title="将 HTML 表格转换为 MD 表格（仅限简单表格）">表转MD</button>
 
       {/* Regex preset buttons — distinct color */}
       {regexPresets.map(p => (
