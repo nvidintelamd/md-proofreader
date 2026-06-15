@@ -624,6 +624,12 @@ function renderTextSegment(text: string): string {
   // Links [text](url)
   result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline" target="_blank">$1</a>')
 
+  // 楷体: text inside parentheses and quotes (but not math)
+  result = result.replace(/（([^）]+)）/g, '<span style="font-family: KaiTi, 楷体, serif">（$1）</span>')
+  result = result.replace(/\(([^)]+)\)/g, '<span style="font-family: KaiTi, 楷体, serif">($1)</span>')
+  result = result.replace(/\u201C([^\u201D]+)\u201D/g, '<span style="font-family: KaiTi, 楷体, serif">\u201C$1\u201D</span>')
+  result = result.replace(/"([^"]+)"/g, '<span style="font-family: KaiTi, 楷体, serif">"$1"</span>')
+
   mathParts.forEach((html, i) => {
     result = result.replace(`__MATH_BLOCK_${i}__`, html)
     result = result.replace(`__MATH_INLINE_${i}__`, html)
