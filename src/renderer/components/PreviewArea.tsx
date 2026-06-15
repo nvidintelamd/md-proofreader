@@ -621,14 +621,24 @@ function renderTextSegment(text: string): string {
   result = result.replace(/~~(.*?)~~/g, '<span class="line-through text-gray-500">$1</span>')
   // Highlight ==text==
   result = result.replace(/==(.*?)==/g, '<span class="bg-yellow-200 px-0.5 rounded">$1</span>')
-  // Links [text](url)
-  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline" target="_blank">$1</a>')
+  // Links [text](url) — protect from KaiTi replacement
+  const linkParts: string[] = []
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_match, text, url) => {
+    const placeholder = `__LINK_${linkParts.length}__`
+    linkParts.push(`<a href="${url}" class="text-blue-600 hover:underline" target="_blank">${text}</a>`)
+    return placeholder
+  })
 
-  // 楷体: text inside parentheses and quotes (but not math)
+  // 楷体: text inside parentheses and quotes (but not math, not links)
   result = result.replace(/（([^）]+)）/g, '<span style="font-family: KaiTi, 楷体, serif">（$1）</span>')
   result = result.replace(/\(([^)]+)\)/g, '<span style="font-family: KaiTi, 楷体, serif">($1)</span>')
   result = result.replace(/\u201C([^\u201D]+)\u201D/g, '<span style="font-family: KaiTi, 楷体, serif">\u201C$1\u201D</span>')
   result = result.replace(/"([^"]+)"/g, '<span style="font-family: KaiTi, 楷体, serif">"$1"</span>')
+
+  // Restore links
+  linkParts.forEach((html, i) => {
+    result = result.replace(`__LINK_${i}__`, html)
+  })
 
   mathParts.forEach((html, i) => {
     result = result.replace(`__MATH_BLOCK_${i}__`, html)
