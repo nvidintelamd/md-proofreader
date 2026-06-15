@@ -30,6 +30,11 @@ export function EditModal({ onSave, onCancel }: Props) {
     }
   }, [])
 
+  const handleSave = () => {
+    // Compress beautified HTML tables back to single line before saving
+    onSave(compressHtmlTables(text))
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Escape') {
       e.preventDefault()
@@ -37,7 +42,7 @@ export function EditModal({ onSave, onCancel }: Props) {
     }
     if (e.key === 's' && (e.ctrlKey || e.metaKey)) {
       e.preventDefault()
-      onSave(text)
+      handleSave()
     }
   }
 
@@ -109,7 +114,7 @@ export function EditModal({ onSave, onCancel }: Props) {
             取消
           </button>
           <button
-            onClick={() => onSave(text)}
+            onClick={handleSave}
             className="px-4 py-1.5 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             保存
@@ -139,5 +144,18 @@ function beautifyHtmlTables(text: string): string {
     }
     result += closeTag
     return result
+  })
+}
+
+function compressHtmlTables(text: string): string {
+  if (!text.includes('<table')) return text
+
+  return text.replace(/(<table[^>]*>)([\s\S]*?)(<\/table>)/gi, (_match, openTag, inner, closeTag) => {
+    // Collapse all whitespace/newlines into a single space between tags
+    const compressed = inner
+      .replace(/\s+/g, ' ')
+      .replace(/>\s+</g, '><')
+      .trim()
+    return openTag + compressed + closeTag
   })
 }

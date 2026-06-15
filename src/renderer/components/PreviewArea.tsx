@@ -65,6 +65,42 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     return blocks
   }, [lines])
 
+  // Detect HTML table continuation lines (lines between <table and </table> that aren't the first line)
+  const isHtmlTableContinuation = useCallback((idx: number): boolean => {
+    let tableStart = -1
+    for (let i = 0; i <= idx; i++) {
+      const t = lines[i]
+      if (t.includes('<table')) {
+        tableStart = i
+      } else if (t.includes('</table>')) {
+        if (i === idx) return false // This is the closing line, show it if it's the last
+        if (tableStart !== -1 && idx > tableStart && idx < i) return true
+        tableStart = -1
+      }
+    }
+    return false
+  }, [lines])
+
+  // Find the full range for a table (MD or HTML) at a given line
+  const findTableRange = useCallback((idx: number): { start: number; end: number } | null => {
+    const mdBlock = mdTableBlocks.find(b => idx >= b.start && idx <= b.end)
+    if (mdBlock) return mdBlock
+
+    // Check HTML table
+    let tableStart = -1
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].includes('<table')) {
+        tableStart = i
+      } else if (lines[i].includes('</table>')) {
+        if (tableStart !== -1 && idx >= tableStart && idx <= i) {
+          return { start: tableStart, end: i }
+        }
+        tableStart = -1
+      }
+    }
+    return null
+  }, [lines, mdTableBlocks])
+
   const handleScroll = useCallback(() => {
     if (!containerRef.current) return
     const container = containerRef.current
@@ -218,6 +254,11 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
       )}
 
       {lines.map((line, idx) => {
+        // Skip hidden lines (MD table rows after first, HTML table rows after first)
+        const isMdTableHidden = mdTableBlocks.some(b => idx > b.start && idx <= b.end)
+        const isHtmlTableHidden = isHtmlTableContinuation(idx)
+        if (isMdTableHidden || isHtmlTableHidden) return null
+
         const isCursor = idx === cursorLine
         const isSelected = visualRange != null && idx >= visualRange.start && idx <= visualRange.end
         const isEdited = editedRange != null && idx >= editedRange.start && idx <= editedRange.end
@@ -236,7 +277,13 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
             onMouseDown={(e) => handleMouseDown(idx, e)}
             onDoubleClick={() => {
               const state = useAppStore.getState()
-              state.setEditRange({ start: idx, end: idx })
+              // If clicking on a table, open full table range
+              const tableRange = findTableRange(idx)
+              if (tableRange) {
+                state.setEditRange(tableRange)
+              } else {
+                state.setEditRange({ start: idx, end: idx })
+              }
               state.setCursorLine(idx)
               state.setMode('edit_modal')
             }}
