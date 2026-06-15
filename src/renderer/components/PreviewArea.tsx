@@ -434,17 +434,14 @@ function MdTableRenderer({ startLine, endLine, imageCache, mdDir }: {
   const lines = useAppStore(s => s.lines)
   const tableLines = lines.slice(startLine, endLine + 1)
 
-  // Parse table rows
+  // Parse table rows, skip separator lines
   const rows: string[][] = []
-  let isSeparator = false
   for (const line of tableLines) {
     const trimmed = line.trim()
-    if (/^\|[\s:-]+\|$/.test(trimmed)) {
-      isSeparator = true
-      continue
-    }
+    // Skip separator rows (| --- | --- |)
+    if (/^\|[\s\-:]+(\|[\s\-:]+)*\|$/.test(trimmed)) continue
     const cells = trimmed.split('|').filter((_, i, arr) => i > 0 && i < arr.length - 1)
-    rows.push(cells.map(c => c.trim()))
+    if (cells.length > 0) rows.push(cells.map(c => c.trim()))
   }
 
   if (rows.length === 0) return null
