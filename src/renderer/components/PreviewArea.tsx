@@ -407,14 +407,35 @@ function LineContent({ line, lineIndex, mathBlocks, mdTableBlocks, imageCache, m
 
   const remaining = line.substring(lastIdx)
 
-  const hMatch = remaining.match(/^(#+)\s(.*)/)
-  if (hMatch) {
+  // Blockquote > text
+  const bqMatch = remaining.match(/^(>+)\s?(.*)/)
+  if (bqMatch) {
+    const depth = bqMatch[1].length
     return (
-      <span>
-        <span className="text-indigo-600 font-bold mr-1">{hMatch[1]}</span>
-        {parts}
-        <span dangerouslySetInnerHTML={{ __html: renderTextSegment(hMatch[2]) }} />
-      </span>
+      <div
+        className="border-l-2 border-gray-400 pl-3 text-gray-600 italic my-0.5"
+        style={{ marginLeft: `${(depth - 1) * 12}px` }}
+        dangerouslySetInnerHTML={{ __html: renderTextSegment(bqMatch[2]) }}
+      />
+    )
+  }
+
+  // Heading H1-H6
+  const hMatch = remaining.match(/^(#{1,6})\s(.*)/)
+  if (hMatch) {
+    const level = hMatch[1].length
+    const sizes: Record<number, string> = {
+      1: 'text-2xl font-bold', 2: 'text-xl font-bold', 3: 'text-lg font-bold',
+      4: 'text-base font-bold', 5: 'text-sm font-bold', 6: 'text-xs font-bold'
+    }
+    return (
+      <div className="flex items-baseline gap-2">
+        <span className="text-indigo-500 font-mono text-xs">{'#'.repeat(level)}</span>
+        <span className={sizes[level] || sizes[1]}>
+          {parts}
+          <span dangerouslySetInnerHTML={{ __html: renderTextSegment(hMatch[2]) }} />
+        </span>
+      </div>
     )
   }
 
@@ -525,35 +546,41 @@ function renderTableWithMath(html: string, imageCache: Map<string, string>, mdDi
 function renderTextSegment(text: string): string {
   if (!text) return ''
 
-  // Split by math expressions FIRST, then escape the non-math parts
-  const parts: string[] = []
+  const mathParts: string[] = []
   let remaining = text
 
-  // Process block math $$...$$
   remaining = remaining.replace(/\$\$([\s\S]*?)\$\$/g, (_match, math) => {
-    const placeholder = `__MATH_BLOCK_${parts.length}__`
-    parts.push(renderMathString(math.trim(), true))
+    const placeholder = `__MATH_BLOCK_${mathParts.length}__`
+    mathParts.push(renderMathString(math.trim(), true))
     return placeholder
   })
-
-  // Process inline math $...$
   remaining = remaining.replace(/(?<!\$)\$(?!\$)(.*?)\$/g, (_match, math) => {
-    const placeholder = `__MATH_INLINE_${parts.length}__`
-    parts.push(renderMathString(math.trim(), false))
+    const placeholder = `__MATH_INLINE_${mathParts.length}__`
+    mathParts.push(renderMathString(math.trim(), false))
     return placeholder
   })
 
-  // Escape HTML on the remaining (non-math) text
   let result = remaining
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 
-  // Bold
+  // Inline code `code`
+  result = result.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-200 rounded text-[11px] font-mono text-gray-800">$1</code>')
+  // Bold italic ***text***
+  result = result.replace(/\*\*\*(.*?)\*\*\*/g, '<span class="font-bold italic">$1</span>')
+  // Bold **text**
   result = result.replace(/\*\*(.*?)\*\*/g, '<span class="font-bold">$1</span>')
+  // Italic *text*
+  result = result.replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<span class="italic">$1</span>')
+  // Strikethrough ~~text~~
+  result = result.replace(/~~(.*?)~~/g, '<span class="line-through text-gray-500">$1</span>')
+  // Highlight ==text==
+  result = result.replace(/==(.*?)==/g, '<span class="bg-yellow-200 px-0.5 rounded">$1</span>')
+  // Links [text](url)
+  result = result.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-blue-600 hover:underline" target="_blank">$1</a>')
 
-  // Restore math placeholders
-  parts.forEach((html, i) => {
+  mathParts.forEach((html, i) => {
     result = result.replace(`__MATH_BLOCK_${i}__`, html)
     result = result.replace(`__MATH_INLINE_${i}__`, html)
   })
