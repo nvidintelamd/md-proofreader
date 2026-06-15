@@ -76,6 +76,16 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     const state = useAppStore.getState()
     if (state.mode === 'edit_modal') return
 
+    // In edit_select mode: click sets end and opens modal
+    if (state.mode === 'edit_select' && state.editRange) {
+      const start = Math.min(state.editRange.start, idx)
+      const end = Math.max(state.editRange.start, idx)
+      state.setEditRange({ start, end })
+      state.setCursorLine(idx)
+      state.setMode('edit_modal')
+      return
+    }
+
     mouseDownRef.current = { idx, y: e.clientY, started: false }
     state.setCursorLine(idx)
     state.setEditRange(null)

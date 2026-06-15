@@ -14,11 +14,7 @@ export function useKeyboardNav() {
     if (mode === 'normal') {
       handleNormalMode(e)
     } else if (mode === 'edit_select') {
-      if (e.key === 'Escape') {
-        e.preventDefault()
-        useAppStore.getState().setMode('normal')
-        useAppStore.getState().setEditRange(null)
-      }
+      handleEditSelectMode(e)
     }
   }, [mode])
 
@@ -26,6 +22,80 @@ export function useKeyboardNav() {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
+}
+
+function handleEditSelectMode(e: KeyboardEvent) {
+  const state = useAppStore.getState()
+  const { cursorLine, editRange, setCursorLine, setMode, setEditRange } = state
+
+  if (e.key === 'Escape') {
+    e.preventDefault()
+    setMode('normal')
+    setEditRange(null)
+    return
+  }
+
+  // Enter or v: open edit modal with current selection
+  if (e.key === 'Enter' || (e.key === 'v' && !e.ctrlKey)) {
+    e.preventDefault()
+    if (editRange) setMode('edit_modal')
+    return
+  }
+
+  // j/k/arrows: extend selection
+  switch (e.key) {
+    case 'j':
+    case 'ArrowDown':
+      e.preventDefault()
+      if (editRange) {
+        const newEnd = Math.min(editRange.end + 1, useAppStore.getState().lines.length - 1)
+        setEditRange({ ...editRange, end: newEnd })
+        setCursorLine(newEnd)
+      }
+      break
+    case 'k':
+    case 'ArrowUp':
+      e.preventDefault()
+      if (editRange) {
+        const newEnd = Math.max(editRange.end - 1, editRange.start)
+        setEditRange({ ...editRange, end: newEnd })
+        setCursorLine(newEnd)
+      }
+      break
+    case 'h':
+    case 'ArrowLeft':
+      e.preventDefault()
+      if (editRange) {
+        setEditRange({ ...editRange, end: editRange.start })
+        setCursorLine(editRange.start)
+      }
+      break
+    case 'l':
+    case 'ArrowRight':
+      e.preventDefault()
+      if (editRange) {
+        const lastLine = useAppStore.getState().lines.length - 1
+        setEditRange({ ...editRange, end: lastLine })
+        setCursorLine(lastLine)
+      }
+      break
+    case 'PageDown':
+      e.preventDefault()
+      if (editRange) {
+        const newEnd = Math.min(editRange.end + 10, useAppStore.getState().lines.length - 1)
+        setEditRange({ ...editRange, end: newEnd })
+        setCursorLine(newEnd)
+      }
+      break
+    case 'PageUp':
+      e.preventDefault()
+      if (editRange) {
+        const newEnd = Math.max(editRange.end - 10, editRange.start)
+        setEditRange({ ...editRange, end: newEnd })
+        setCursorLine(newEnd)
+      }
+      break
+  }
 }
 
 function handleNormalMode(e: KeyboardEvent) {
