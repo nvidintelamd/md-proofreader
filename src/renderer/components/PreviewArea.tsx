@@ -407,6 +407,15 @@ function LineContent({ line, lineIndex, mathBlocks, mdTableBlocks, imageCache, m
 
   const remaining = line.substring(lastIdx)
 
+  // HR --- or *** or ___
+  if (/^(-{3,}|\*{3,}|_{3,})$/.test(remaining.trim())) {
+    return (
+      <div className="my-3 flex items-center justify-center">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-gray-300 to-transparent" />
+      </div>
+    )
+  }
+
   // Blockquote > text
   const bqMatch = remaining.match(/^(>+)\s?(.*)/)
   if (bqMatch) {
@@ -566,7 +575,7 @@ function renderTextSegment(text: string): string {
     .replace(/>/g, '&gt;')
 
   // Inline code `code`
-  result = result.replace(/`([^`]+)`/g, '<code class="px-1 py-0.5 bg-gray-200 rounded text-[11px] font-mono text-gray-800">$1</code>')
+  result = result.replace(/`([^`]+)`/g, '<code class="px-1.5 py-0.5 bg-red-50 text-red-600 rounded text-sm font-mono border border-red-200">$1</code>')
   // Bold italic ***text***
   result = result.replace(/\*\*\*(.*?)\*\*\*/g, '<span class="font-bold italic">$1</span>')
   // Bold **text**
