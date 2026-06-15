@@ -416,6 +416,41 @@ function LineContent({ line, lineIndex, mathBlocks, mdTableBlocks, imageCache, m
     )
   }
 
+  // Unordered list - item or * item
+  const listMatch = remaining.match(/^(\s*)([-*+])\s(.*)/)
+  if (listMatch) {
+    const indent = listMatch[1].length
+    const level = Math.floor(indent / 2)
+    const content = listMatch[3]
+    return (
+      <div
+        className="flex items-center gap-1.5 my-0.5"
+        style={{ paddingLeft: `${level * 16}px` }}
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-gray-400 flex-shrink-0 mt-1.5" />
+        <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: renderTextSegment(content) }} />
+      </div>
+    )
+  }
+
+  // Ordered list 1. item
+  const olMatch = remaining.match(/^(\s*)(\d+)\.\s(.*)/)
+  if (olMatch) {
+    const indent = olMatch[1].length
+    const level = Math.floor(indent / 2)
+    const num = olMatch[2]
+    const content = olMatch[3]
+    return (
+      <div
+        className="flex items-center gap-1.5 my-0.5"
+        style={{ paddingLeft: `${level * 16}px` }}
+      >
+        <span className="text-gray-500 text-xs font-mono flex-shrink-0 mt-0.5 min-w-[1rem] text-right">{num}.</span>
+        <span className="leading-relaxed" dangerouslySetInnerHTML={{ __html: renderTextSegment(content) }} />
+      </div>
+    )
+  }
+
   // Blockquote > text
   const bqMatch = remaining.match(/^(>+)\s?(.*)/)
   if (bqMatch) {
