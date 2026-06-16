@@ -44,6 +44,63 @@ export function EditModal({ onSave, onCancel }: Props) {
       e.preventDefault()
       handleSave()
     }
+    // Tab: indent 2 spaces (or shift+tab: dedent)
+    if (e.key === 'Tab') {
+      e.preventDefault()
+      const textarea = e.currentTarget as HTMLTextAreaElement
+      const start = textarea.selectionStart
+      const end = textarea.selectionEnd
+      const isMultiLine = text.substring(start, end).includes('\n') || start !== end
+
+      if (e.shiftKey) {
+        // Shift+Tab: dedent
+        const allLines = text.split('\n')
+        const beforeCursor = text.slice(0, start)
+        const afterCursor = text.slice(end)
+        const startLineIdx = beforeCursor.split('\n').length - 1
+        const endLineIdx = (start === end ? startLineIdx : beforeCursor.split('\n').length + text.substring(start, end).split('\n').length - 2)
+
+        let removedBefore = 0
+        for (let i = startLineIdx; i <= endLineIdx && i < allLines.length; i++) {
+          if (allLines[i].startsWith('  ')) {
+            allLines[i] = allLines[i].substring(2)
+            if (i === startLineIdx) removedBefore = 2
+          } else if (allLines[i].startsWith(' ')) {
+            allLines[i] = allLines[i].substring(1)
+            if (i === startLineIdx) removedBefore = 1
+          }
+        }
+        const newText = allLines.join('\n')
+        setText(newText)
+        setTimeout(() => {
+          textarea.setSelectionRange(Math.max(0, start - removedBefore), Math.max(0, end - removedBefore))
+        }, 0)
+      } else {
+        // Tab: indent 2 spaces
+        if (start === end) {
+          // No selection: insert 2 spaces
+          const newText = text.slice(0, start) + '  ' + text.slice(end)
+          setText(newText)
+          setTimeout(() => textarea.setSelectionRange(start + 2, start + 2), 0)
+        } else {
+          // Selection: indent all selected lines
+          const allLines = text.split('\n')
+          const beforeCursor = text.slice(0, start)
+          const startLineIdx = beforeCursor.split('\n').length - 1
+          const selectedText = text.substring(start, end)
+          const endLineIdx = startLineIdx + selectedText.split('\n').length - 1
+
+          let added = 0
+          for (let i = startLineIdx; i <= endLineIdx && i < allLines.length; i++) {
+            allLines[i] = '  ' + allLines[i]
+            added += 2
+          }
+          const newText = allLines.join('\n')
+          setText(newText)
+          setTimeout(() => textarea.setSelectionRange(start + 2, end + added), 0)
+        }
+      }
+    }
   }
 
   const handleBackspace = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

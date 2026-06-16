@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAppStore } from '../store/appStore'
+import { useAppStore, type RegexPreset } from '../store/appStore'
 
 export function FindReplaceWidget() {
   const setShowRegexPanel = useAppStore(s => s.setShowRegexPanel)
   const addRegexPreset = useAppStore(s => s.addRegexPreset)
+  const updateRegexPreset = useAppStore(s => s.updateRegexPreset)
 
   const [findText, setFindText] = useState('')
   const [replaceText, setReplaceText] = useState('')
@@ -13,20 +14,37 @@ export function FindReplaceWidget() {
   const [error, setError] = useState('')
   const [showPresetName, setShowPresetName] = useState(false)
   const [presetName, setPresetName] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [showPresets, setShowPresets] = useState(false)
 
-  // Live search — always reads from store
+  // Listen for edit events from status bar right-click
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const preset = (e as CustomEvent).detail as RegexPreset
+      if (preset) {
+        setEditingId(preset.id)
+        setFindText(preset.pattern)
+        setReplaceText(preset.replacement)
+        setPresetName(preset.name)
+        setShowPresets(false)
+      }
+    }
+    window.addEventListener('regex-edit', handler)
+    return () => window.removeEventListener('regex-edit', handler)
+  }, [])
+
+  // Live search — multi-line: join all lines, search full content
   const search = useCallback(() => {
     if (!findText.trim()) { setMatchCount(0); setMatchInfo(''); setError(''); return }
     const { lines, editRange } = useAppStore.getState()
     try {
-      const re = useRegex ? new RegExp(findText, 'g') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
       const start = editRange ? editRange.start : 0
       const end = editRange ? editRange.end : lines.length - 1
-      let count = 0
-      for (let i = start; i <= end; i++) {
-        re.lastIndex = 0
-        if (re.test(lines[i])) count++
-      }
+      // Join selected/full range into single string for multi-line matching
+      const content = lines.slice(start, end + 1).join('\n')
+      const re = useRegex ? new RegExp(findText, 'gs') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+      const matches = content.match(re)
+      const count = matches ? matches.length : 0
       setMatchCount(count)
       setMatchInfo(count > 0 ? `${count} 个匹配` : '无匹配')
       setError('')
@@ -39,68 +57,72 @@ export function FindReplaceWidget() {
 
   useEffect(() => { search() }, [search])
 
-  // Replace — reads everything from store, writes back, then re-searches
+  // Replace — multi-line: join lines, replace on full content, split back
   const handleReplace = (replaceAll: boolean) => {
     if (!findText.trim() || matchCount === 0) return
 
     const { lines, editRange, pushUndo, setLines, setEditedRange, setCursorLine, setEditRange } = useAppStore.getState()
-
     const start = editRange ? editRange.start : 0
-    let end = editRange ? editRange.end : lines.length - 1
+    const end = editRange ? editRange.end : lines.length - 1
 
     pushUndo({ lines: [...lines], range: { start, end } })
 
-    const re = useRegex ? new RegExp(findText, 'g') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+    const content = lines.slice(start, end + 1).join('\n')
+    const flags = useRegex ? 'gs' : 'g'
+    const re = useRegex ? new RegExp(findText, flags) : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags)
     const realReplace = replaceText.replace(/\\n/g, '\n')
+
+    let newContent: string
+    if (replaceAll) {
+      newContent = content.replace(re, realReplace)
+    } else {
+      newContent = content.replace(re, realReplace)
+    }
+
+    if (newContent === content) return
+
+    // Split back to lines and update store
+    const newRangeLines = newContent.split('\n')
     const newLines = [...lines]
-    let firstChanged = -1
-    let lastChanged = -1
+    newLines.splice(start, end - start + 1, ...newRangeLines)
 
-    for (let i = start; i <= end; i++) {
-      const original = newLines[i]
-      const result = newLines[i].replace(new RegExp(re.source, 'g'), realReplace)
-      if (result !== original) {
-        if (firstChanged === -1) firstChanged = i
-        if (result.includes('\n')) {
-          const splitLines = result.split('\n')
-          newLines.splice(i, 1, ...splitLines)
-          lastChanged = i + splitLines.length - 1
-          // Skip past newly inserted lines to prevent re-matching
-          i += splitLines.length - 1
-          end += splitLines.length - 1
-        } else {
-          newLines[i] = result
-          lastChanged = i
-        }
-        if (!replaceAll) break
-      }
-    }
-
-    // Write to store — this triggers PreviewArea re-render
     setLines(newLines)
-
-    if (firstChanged !== -1) {
-      setEditedRange({ start: firstChanged, end: lastChanged })
-      setCursorLine(firstChanged)
-    }
+    setEditedRange({ start, end: start + newRangeLines.length - 1 })
+    setCursorLine(start)
     setEditRange(null)
 
-    // Re-search using fresh store data
-    search()
+    setTimeout(() => search(), 50)
   }
 
-  const handleAddAsButton = () => {
+  const handleSavePreset = () => {
     if (!findText.trim()) return
     if (!presetName.trim()) { setShowPresetName(true); return }
 
-    addRegexPreset({
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-      name: presetName.trim(),
-      pattern: findText,
-      replacement: replaceText
-    })
+    if (editingId) {
+      updateRegexPreset(editingId, { name: presetName.trim(), pattern: findText, replacement: replaceText })
+    } else {
+      addRegexPreset({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name: presetName.trim(),
+        pattern: findText,
+        replacement: replaceText
+      })
+    }
     setPresetName('')
     setShowPresetName(false)
+    setEditingId(null)
+  }
+
+  const handleDeletePreset = (id: string) => {
+    useAppStore.getState().deleteRegexPreset(id)
+  }
+
+  const handleLoadPreset = (p: RegexPreset) => {
+    setEditingId(p.id)
+    setFindText(p.pattern)
+    setReplaceText(p.replacement)
+    setPresetName(p.name)
+    setShowPresets(false)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -109,8 +131,10 @@ export function FindReplaceWidget() {
     if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); handleReplace(true) }
   }
 
+  const regexPresets = useAppStore(s => s.regexPresets)
+
   return (
-    <div className="fixed top-12 right-4 z-[9999] w-[420px]" onKeyDown={handleKeyDown}>
+    <div className="fixed top-12 right-4 z-[9999] w-[440px]" onKeyDown={handleKeyDown}>
       <div className="bg-[#252526] border border-white/10 rounded-lg shadow-2xl text-white text-xs">
         {/* Find row */}
         <div className="flex items-center gap-1 p-2 border-b border-white/10">
@@ -118,7 +142,7 @@ export function FindReplaceWidget() {
           <input autoFocus value={findText}
             onChange={(e) => { setFindText(e.target.value); setError('') }}
             className="flex-1 px-2 py-1 bg-[#1e1e1e] border border-white/10 rounded text-xs font-mono focus:outline-none focus:border-blue-500"
-            placeholder="查找内容"
+            placeholder="查找内容（支持多行正则）"
           />
           <button onClick={() => setUseRegex(!useRegex)}
             className={`w-6 h-6 flex items-center justify-center rounded text-[10px] font-bold ${useRegex ? 'bg-blue-600 text-white' : 'bg-gray-600 text-gray-400'}`}
@@ -138,35 +162,55 @@ export function FindReplaceWidget() {
         </div>
 
         {/* Actions row */}
-        <div className="flex items-center gap-1 p-2">
+        <div className="flex items-center gap-1 p-2 border-b border-white/10">
           <button onClick={() => handleReplace(false)} disabled={matchCount === 0}
-            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-40 disabled:cursor-not-allowed">
-            替换
-          </button>
+            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-40 disabled:cursor-not-allowed">替换</button>
           <button onClick={() => handleReplace(true)} disabled={matchCount === 0}
-            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-40 disabled:cursor-not-allowed">
-            全部替换
-          </button>
+            className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded disabled:opacity-40 disabled:cursor-not-allowed">全部替换</button>
           <div className="flex-1" />
+
+          {/* Save/update preset */}
           {showPresetName ? (
             <div className="flex items-center gap-1">
               <input value={presetName} onChange={(e) => setPresetName(e.target.value.slice(0, 4))} maxLength={4}
                 className="w-16 px-1 py-0.5 bg-[#1e1e1e] border border-white/10 rounded text-[10px] focus:outline-none focus:border-blue-500"
                 placeholder="名称" autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') handleAddAsButton() }} />
-              <button onClick={handleAddAsButton} className="px-1.5 py-0.5 bg-green-600 hover:bg-green-700 rounded text-[10px]">✓</button>
-              <button onClick={() => setShowPresetName(false)} className="px-1.5 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-[10px]">✗</button>
+                onKeyDown={(e) => { if (e.key === 'Enter') handleSavePreset() }} />
+              <button onClick={handleSavePreset} className="px-1.5 py-0.5 bg-green-600 hover:bg-green-700 rounded text-[10px]">✓</button>
+              <button onClick={() => { setShowPresetName(false); setEditingId(null) }} className="px-1.5 py-0.5 bg-gray-600 hover:bg-gray-500 rounded text-[10px]">✗</button>
             </div>
           ) : (
             <button onClick={() => { if (findText.trim()) setShowPresetName(true) }}
               disabled={!findText.trim()}
               className="px-2 py-1 bg-green-600 hover:bg-green-700 rounded disabled:opacity-40 disabled:cursor-not-allowed text-[10px]">
-              添加为按钮
+              {editingId ? '更新按钮' : '添加为按钮'}
             </button>
+          )}
+
+          {/* Preset list toggle */}
+          {regexPresets.length > 0 && (
+            <button onClick={() => setShowPresets(!showPresets)}
+              className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-[10px]">管理</button>
           )}
           <button onClick={() => setShowRegexPanel(false)} className="px-2 py-1 text-gray-400 hover:text-white text-[10px]">关闭</button>
         </div>
-        {error && <div className="px-2 pb-2 text-red-400 text-[10px]">{error}</div>}
+
+        {error && <div className="px-2 pb-1 text-red-400 text-[10px]">{error}</div>}
+
+        {/* Preset management list */}
+        {showPresets && regexPresets.length > 0 && (
+          <div className="px-2 py-2 space-y-1 max-h-[160px] overflow-y-auto border-t border-white/10">
+            {regexPresets.map(p => (
+              <div key={p.id} className="flex items-center justify-between bg-[#1e1e1e] rounded px-2 py-1.5">
+                <button onClick={() => handleLoadPreset(p)} className="flex-1 min-w-0 text-left hover:text-blue-400">
+                  <span className="font-medium">{p.name}</span>
+                  <span className="text-white/30 ml-2 font-mono text-[10px] truncate">{p.pattern}</span>
+                </button>
+                <button onClick={() => handleDeletePreset(p.id)} className="ml-2 text-red-400 hover:text-red-300 px-1 text-[10px]">删除</button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
