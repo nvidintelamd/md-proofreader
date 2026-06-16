@@ -60,6 +60,7 @@ interface AppState {
   // Regex presets
   regexPresets: RegexPreset[]
   showRegexPanel: boolean
+  editingRegexPreset: RegexPreset | null
 
   // Dirty state & save toast
   isDirty: boolean
@@ -93,6 +94,7 @@ interface AppState {
   deleteRegexPreset: (id: string) => void
   updateRegexPreset: (id: string, data: Partial<Omit<RegexPreset, 'id'>>) => void
   setShowRegexPanel: (show: boolean) => void
+  setEditingRegexPreset: (preset: RegexPreset | null) => void
 
   // Per-file state management
   saveCurrentFileState: () => void
@@ -128,6 +130,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   regexPresets: [],
   showRegexPanel: false,
+  editingRegexPreset: null,
 
   isDirty: false,
   showSaveToast: false,
@@ -205,6 +208,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     regexPresets: get().regexPresets.map(p => p.id === id ? { ...p, ...data } : p)
   }),
   setShowRegexPanel: (show) => set({ showRegexPanel: show }),
+  setEditingRegexPreset: (preset) => set({ editingRegexPreset: preset }),
 
   saveCurrentFileState: () => {
     const filePath = getCurrentFilePath(get)

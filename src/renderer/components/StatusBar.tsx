@@ -60,10 +60,8 @@ export function StatusBar() {
 
   const handleRegexRightClick = (e: React.MouseEvent, preset: any) => {
     e.preventDefault()
-    setShowRegexPanel(true)
-    setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('regex-edit', { detail: preset }))
-    }, 100)
+    useAppStore.getState().setEditingRegexPreset(preset)
+    useAppStore.getState().setShowRegexPanel(true)
   }
 
   return (

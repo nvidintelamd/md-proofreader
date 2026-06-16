@@ -13,6 +13,9 @@ export function EditModal({ onSave, onCancel }: Props) {
   const mdDir = useAppStore(s => s.mdDir)
   const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [surroundPrefix, setSurroundPrefix] = useState('')
+  const [surroundSuffix, setSurroundSuffix] = useState('')
+  const [showSurround, setShowSurround] = useState(false)
 
   useEffect(() => {
     if (editRange) {
@@ -31,8 +34,23 @@ export function EditModal({ onSave, onCancel }: Props) {
   }, [])
 
   const handleSave = () => {
-    // Compress beautified HTML tables back to single line before saving
     onSave(compressHtmlTables(text))
+  }
+
+  const handleSurround = () => {
+    if (!surroundPrefix && !surroundSuffix) return
+    const textarea = textareaRef.current
+    if (!textarea) return
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const selected = text.substring(start, end)
+    const newText = text.substring(0, start) + surroundPrefix + selected + surroundSuffix + text.substring(end)
+    setText(newText)
+    // Select the wrapped content
+    setTimeout(() => {
+      textarea.setSelectionRange(start + surroundPrefix.length, end + surroundPrefix.length)
+      textarea.focus()
+    }, 0)
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -150,6 +168,29 @@ export function EditModal({ onSave, onCancel }: Props) {
         </div>
 
         <div className="flex-1 p-4 overflow-auto">
+          {/* Surround toolbar */}
+          <div className="flex items-center gap-1.5 mb-2">
+            <button onClick={() => setShowSurround(!showSurround)}
+              className="px-2 py-0.5 text-[10px] rounded bg-gray-200 hover:bg-gray-300 text-gray-600 font-bold">
+              +
+            </button>
+            {showSurround && (
+              <>
+                <input value={surroundPrefix} onChange={(e) => setSurroundPrefix(e.target.value)}
+                  className="w-24 px-2 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  placeholder="前插入" />
+                <input value={surroundSuffix} onChange={(e) => setSurroundSuffix(e.target.value)}
+                  className="w-24 px-2 py-0.5 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-400"
+                  placeholder="后插入" />
+                <button onClick={handleSurround}
+                  className="px-2 py-0.5 text-[10px] rounded bg-blue-600 hover:bg-blue-700 text-white">
+                  套用
+                </button>
+                <span className="text-[10px] text-gray-400">选中文本后点击套用</span>
+              </>
+            )}
+          </div>
+
           <textarea
             ref={textareaRef}
             value={text}

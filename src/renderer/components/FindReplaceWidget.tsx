@@ -17,21 +17,19 @@ export function FindReplaceWidget() {
   const [editingId, setEditingId] = useState<string | null>(null)
   const [showPresets, setShowPresets] = useState(false)
 
-  // Listen for edit events from status bar right-click
+  // Load editing preset from store
+  const editingRegexPreset = useAppStore(s => s.editingRegexPreset)
   useEffect(() => {
-    const handler = (e: Event) => {
-      const preset = (e as CustomEvent).detail as RegexPreset
-      if (preset) {
-        setEditingId(preset.id)
-        setFindText(preset.pattern)
-        setReplaceText(preset.replacement)
-        setPresetName(preset.name)
-        setShowPresets(false)
-      }
+    if (editingRegexPreset) {
+      setEditingId(editingRegexPreset.id)
+      setFindText(editingRegexPreset.pattern)
+      setReplaceText(editingRegexPreset.replacement)
+      setPresetName(editingRegexPreset.name)
+      setShowPresets(false)
+      // Clear the preset from store after loading
+      useAppStore.getState().setEditingRegexPreset(null)
     }
-    window.addEventListener('regex-edit', handler)
-    return () => window.removeEventListener('regex-edit', handler)
-  }, [])
+  }, [editingRegexPreset])
 
   // Live search — multi-line: join all lines, search full content
   const search = useCallback(() => {
