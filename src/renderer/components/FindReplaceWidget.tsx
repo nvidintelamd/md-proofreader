@@ -40,9 +40,10 @@ export function FindReplaceWidget() {
     try {
       const start = editRange ? editRange.start : 0
       const end = editRange ? editRange.end : lines.length - 1
-      // Join selected/full range into single string for multi-line matching
       const content = lines.slice(start, end + 1).join('\n')
-      const re = useRegex ? new RegExp(findText, 'gs') : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+      // Convert literal \n to real newlines in find pattern
+      const pattern = findText.replace(/\\n/g, '\n')
+      const re = useRegex ? new RegExp(pattern, 'gs') : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
       const matches = content.match(re)
       const count = matches ? matches.length : 0
       setMatchCount(count)
@@ -69,7 +70,8 @@ export function FindReplaceWidget() {
 
     const content = lines.slice(start, end + 1).join('\n')
     const flags = useRegex ? 'gs' : 'g'
-    const re = useRegex ? new RegExp(findText, flags) : new RegExp(findText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags)
+    const pattern = findText.replace(/\\n/g, '\n')
+    const re = useRegex ? new RegExp(pattern, flags) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags)
     const realReplace = replaceText.replace(/\\n/g, '\n')
 
     let newContent: string
