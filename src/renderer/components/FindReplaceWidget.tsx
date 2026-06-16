@@ -43,7 +43,7 @@ export function FindReplaceWidget() {
       const content = lines.slice(start, end + 1).join('\n')
       // Convert literal \n to real newlines in find pattern
       const pattern = findText.replace(/\\n/g, '\n')
-      const re = useRegex ? new RegExp(pattern, 'gs') : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
+      const re = useRegex ? new RegExp(pattern, 'gms') : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')
       const matches = content.match(re)
       const count = matches ? matches.length : 0
       setMatchCount(count)
@@ -69,7 +69,7 @@ export function FindReplaceWidget() {
     pushUndo({ lines: [...lines], range: { start, end } })
 
     const content = lines.slice(start, end + 1).join('\n')
-    const flags = useRegex ? 'gs' : 'g'
+    const flags = useRegex ? 'gms' : 'g'
     const pattern = findText.replace(/\\n/g, '\n')
     const re = useRegex ? new RegExp(pattern, flags) : new RegExp(pattern.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), flags)
     const realReplace = replaceText.replace(/\\n/g, '\n')
