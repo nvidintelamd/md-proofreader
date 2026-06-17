@@ -21,6 +21,8 @@ export default function App() {
   const regexPresets = useAppStore(s => s.regexPresets)
   const setRegexPresets = useAppStore(s => s.setRegexPresets)
   const showSaveToast = useAppStore(s => s.showSaveToast)
+  const surroundPresets = useAppStore(s => s.surroundPresets)
+  const setSurroundPresets = useAppStore(s => s.setSurroundPresets)
 
   const { loadFiles, loadFileContent, loadLastSession } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
@@ -35,20 +37,17 @@ export default function App() {
   useEffect(() => {
     loadLastSession().then(async () => {
       const session = await window.api.loadSession()
-      if (session.regexPresets) {
-        setRegexPresets(session.regexPresets)
-      }
+      if (session.regexPresets) setRegexPresets(session.regexPresets)
+      if (session.surroundPresets) setSurroundPresets(session.surroundPresets)
     })
   }, [])
 
-  // Save regex presets when they change
+  // Save presets when they change
   useEffect(() => {
-    if (regexPresets.length > 0 || true) {
-      window.api.loadSession().then(session => {
-        window.api.saveSession({ ...session, regexPresets })
-      })
-    }
-  }, [regexPresets])
+    window.api.loadSession().then(session => {
+      window.api.saveSession({ ...session, regexPresets, surroundPresets })
+    })
+  }, [regexPresets, surroundPresets])
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {

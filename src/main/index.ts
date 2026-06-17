@@ -36,8 +36,9 @@ function createWindow(): void {
 // Session state: stores opened files + proofread status
 interface SessionData {
   filePaths: string[]
-  proofreadStatus: Record<string, boolean>  // path -> done
+  proofreadStatus: Record<string, boolean>
   regexPresets?: { id: string; name: string; pattern: string; replacement: string }[]
+  surroundPresets?: { id: string; name: string; prefix: string; suffix: string }[]
 }
 
 async function readSession(): Promise<SessionData> {

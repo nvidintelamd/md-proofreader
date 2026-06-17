@@ -28,6 +28,13 @@ export interface RegexPreset {
   replacement: string
 }
 
+export interface SurroundPreset {
+  id: string
+  name: string
+  prefix: string
+  suffix: string
+}
+
 function createFileState(): FileState {
   return { editRange: null, editedRange: null, undoStack: [], cursorLine: 0, scrollTop: 0 }
 }
@@ -62,6 +69,9 @@ interface AppState {
   showRegexPanel: boolean
   editingRegexPreset: RegexPreset | null
 
+  // Surround presets
+  surroundPresets: SurroundPreset[]
+
   // Dirty state & save toast
   isDirty: boolean
   showSaveToast: boolean
@@ -95,6 +105,11 @@ interface AppState {
   updateRegexPreset: (id: string, data: Partial<Omit<RegexPreset, 'id'>>) => void
   setShowRegexPanel: (show: boolean) => void
   setEditingRegexPreset: (preset: RegexPreset | null) => void
+
+  setSurroundPresets: (presets: SurroundPreset[]) => void
+  addSurroundPreset: (preset: SurroundPreset) => void
+  deleteSurroundPreset: (id: string) => void
+  updateSurroundPreset: (id: string, data: Partial<Omit<SurroundPreset, 'id'>>) => void
 
   // Per-file state management
   saveCurrentFileState: () => void
@@ -131,6 +146,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   regexPresets: [],
   showRegexPanel: false,
   editingRegexPreset: null,
+
+  surroundPresets: [],
 
   isDirty: false,
   showSaveToast: false,
@@ -209,6 +226,13 @@ export const useAppStore = create<AppState>((set, get) => ({
   }),
   setShowRegexPanel: (show) => set({ showRegexPanel: show }),
   setEditingRegexPreset: (preset) => set({ editingRegexPreset: preset }),
+
+  setSurroundPresets: (presets) => set({ surroundPresets: presets }),
+  addSurroundPreset: (preset) => set({ surroundPresets: [...get().surroundPresets, preset] }),
+  deleteSurroundPreset: (id) => set({ surroundPresets: get().surroundPresets.filter(p => p.id !== id) }),
+  updateSurroundPreset: (id, data) => set({
+    surroundPresets: get().surroundPresets.map(p => p.id === id ? { ...p, ...data } : p)
+  }),
 
   saveCurrentFileState: () => {
     const filePath = getCurrentFilePath(get)

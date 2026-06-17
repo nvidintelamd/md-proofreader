@@ -11,6 +11,7 @@ interface SessionData {
   filePaths: string[]
   proofreadStatus: Record<string, boolean>
   regexPresets?: RegexPresetData[]
+  surroundPresets?: { id: string; name: string; prefix: string; suffix: string }[]
 }
 
 declare global {
