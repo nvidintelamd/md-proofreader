@@ -12,6 +12,7 @@ export function EditModal({ onSave, onCancel }: Props) {
   const surroundPresets = useAppStore(s => s.surroundPresets)
   const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const initializedRef = useRef(false)
 
   // Surround manager state
   const [sp, setSp] = useState('')
@@ -21,6 +22,8 @@ export function EditModal({ onSave, onCancel }: Props) {
 
   // Initialize text from store (read directly, not subscribe)
   useEffect(() => {
+    if (initializedRef.current) return
+    initializedRef.current = true
     const { lines, editRange } = useAppStore.getState()
     if (editRange) {
       const selectedLines = lines.slice(editRange.start, editRange.end + 1)
@@ -28,12 +31,7 @@ export function EditModal({ onSave, onCancel }: Props) {
       content = beautifyHtmlTables(content)
       setText(content)
     }
-  }, []) // Only on mount
-
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.focus()
-    }
+    setTimeout(() => textareaRef.current?.focus(), 50)
   }, [])
 
   const handleSave = () => {
