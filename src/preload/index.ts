@@ -15,6 +15,10 @@ const api = {
   markDone: (filePath: string) => ipcRenderer.invoke('session:markDone', filePath),
   resetFile: (filePath: string) => ipcRenderer.invoke('session:resetFile', filePath),
 
+  // Permanent presets & groups
+  loadPermanent: () => ipcRenderer.invoke('permanent:load'),
+  savePermanent: (data: any) => ipcRenderer.invoke('permanent:save', data),
+
   // Window controls
   minimizeWindow: () => ipcRenderer.send('window:minimize'),
   maximizeWindow: () => ipcRenderer.send('window:maximize'),

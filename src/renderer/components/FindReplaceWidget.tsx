@@ -192,6 +192,24 @@ export function FindReplaceWidget() {
             <button onClick={() => setShowPresets(!showPresets)}
               className="px-2 py-1 bg-gray-600 hover:bg-gray-500 rounded text-[10px]">管理</button>
           )}
+
+          {/* Permanentize button - only when editing a preset */}
+          {editingId && findText.trim() && (
+            <button onClick={() => {
+              const permPresets = useAppStore.getState().regexPresets
+              const preset = permPresets.find(p => p.id === editingId)
+              if (!preset) return
+              // Add to permanent store
+              window.api.loadPermanent().then(data => {
+                const newPreset = { id: preset.id, name: preset.name, pattern: preset.pattern, replacement: preset.replacement }
+                const exists = data.presets.some(p => p.id === preset.id)
+                if (!exists) data.presets.push(newPreset)
+                window.api.savePermanent(data)
+              })
+              useAppStore.getState().setShowPermManager(true)
+            }}
+              className="px-2 py-1 bg-amber-600 hover:bg-amber-700 rounded text-[10px]">永久化</button>
+          )}
           <button onClick={() => setShowRegexPanel(false)} className="px-2 py-1 text-gray-400 hover:text-white text-[10px]">关闭</button>
         </div>
 

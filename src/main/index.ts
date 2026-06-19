@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, dialog, Menu } from 'electron'
 import { join } from 'path'
 import { readFile, writeFile, stat, mkdir } from 'fs/promises'
+import { readPermanent, writePermanent, type PermanentData } from './permanentStore'
 
 let mainWindow: BrowserWindow | null = null
 
@@ -150,6 +151,13 @@ ipcMain.handle('session:resetFile', async (_event, filePath: string) => {
   delete session.proofreadStatus[filePath]
   await writeSession(session)
   return session
+})
+
+// Permanent presets & groups IPC
+ipcMain.handle('permanent:load', async () => readPermanent())
+ipcMain.handle('permanent:save', async (_event, data: PermanentData) => {
+  await writePermanent(data)
+  return data
 })
 
 // Window control IPC

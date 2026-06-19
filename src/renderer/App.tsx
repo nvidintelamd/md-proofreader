@@ -10,6 +10,7 @@ import { EditModal } from './components/EditModal'
 import { StatusBar } from './components/StatusBar'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import { FindReplaceWidget } from './components/FindReplaceWidget'
+import { PermanentManager } from './components/PermanentManager'
 
 export default function App() {
   const files = useAppStore(s => s.files)
@@ -23,6 +24,7 @@ export default function App() {
   const showSaveToast = useAppStore(s => s.showSaveToast)
   const surroundPresets = useAppStore(s => s.surroundPresets)
   const setSurroundPresets = useAppStore(s => s.setSurroundPresets)
+  const showPermManager = useAppStore(s => s.showPermManager)
 
   const { loadFiles, loadFileContent, loadLastSession } = useFileLoader()
   const { applyEdit, cancelEdit } = useEditMode()
@@ -218,6 +220,8 @@ export default function App() {
       )}
 
       {showRegexPanel && <FindReplaceWidget />}
+
+      {showPermManager && <PermanentManager />}
 
       {/* Save toast */}
       {showSaveToast && (

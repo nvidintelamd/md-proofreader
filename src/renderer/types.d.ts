@@ -7,11 +7,36 @@ interface RegexPresetData {
   replacement: string
 }
 
+interface SurroundPresetData {
+  id: string
+  name: string
+  prefix: string
+  suffix: string
+}
+
+interface PermanentPresetData {
+  id: string
+  name: string
+  pattern: string
+  replacement: string
+}
+
+interface PresetGroupData {
+  id: string
+  name: string
+  presetIds: string[]
+}
+
 interface SessionData {
   filePaths: string[]
   proofreadStatus: Record<string, boolean>
   regexPresets?: RegexPresetData[]
-  surroundPresets?: { id: string; name: string; prefix: string; suffix: string }[]
+  surroundPresets?: SurroundPresetData[]
+}
+
+interface PermanentData {
+  presets: PermanentPresetData[]
+  groups: PresetGroupData[]
 }
 
 declare global {
@@ -26,6 +51,8 @@ declare global {
       saveSession: (data: SessionData) => Promise<void>
       markDone: (filePath: string) => Promise<SessionData>
       resetFile: (filePath: string) => Promise<SessionData>
+      loadPermanent: () => Promise<PermanentData>
+      savePermanent: (data: PermanentData) => Promise<PermanentData>
       minimizeWindow: () => void
       maximizeWindow: () => void
       closeWindow: () => void

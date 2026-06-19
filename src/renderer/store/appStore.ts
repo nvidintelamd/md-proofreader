@@ -72,6 +72,9 @@ interface AppState {
   // Surround presets
   surroundPresets: SurroundPreset[]
 
+  // Permanent manager
+  showPermManager: boolean
+
   // Dirty state & save toast
   isDirty: boolean
   showSaveToast: boolean
@@ -111,6 +114,8 @@ interface AppState {
   deleteSurroundPreset: (id: string) => void
   updateSurroundPreset: (id: string, data: Partial<Omit<SurroundPreset, 'id'>>) => void
 
+  setShowPermManager: (show: boolean) => void
+
   // Per-file state management
   saveCurrentFileState: () => void
   restoreFileState: (filePath: string) => void
@@ -148,6 +153,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   editingRegexPreset: null,
 
   surroundPresets: [],
+
+  showPermManager: false,
 
   isDirty: false,
   showSaveToast: false,
@@ -233,6 +240,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateSurroundPreset: (id, data) => set({
     surroundPresets: get().surroundPresets.map(p => p.id === id ? { ...p, ...data } : p)
   }),
+
+  setShowPermManager: (show) => set({ showPermManager: show }),
 
   saveCurrentFileState: () => {
     const filePath = getCurrentFilePath(get)
