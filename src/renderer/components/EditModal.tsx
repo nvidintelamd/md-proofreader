@@ -7,9 +7,7 @@ interface Props {
 }
 
 export function EditModal({ onSave, onCancel }: Props) {
-  const lines = useAppStore(s => s.lines)
   const editRange = useAppStore(s => s.editRange)
-  const imageCache = useAppStore(s => s.imageCache)
   const mdDir = useAppStore(s => s.mdDir)
   const surroundPresets = useAppStore(s => s.surroundPresets)
   const [text, setText] = useState('')
@@ -21,15 +19,16 @@ export function EditModal({ onSave, onCancel }: Props) {
   const [editingSurroundId, setEditingSurroundId] = useState<string | null>(null)
   const [showSurroundManager, setShowSurroundManager] = useState(false)
 
+  // Initialize text from store (read directly, not subscribe)
   useEffect(() => {
+    const { lines, editRange } = useAppStore.getState()
     if (editRange) {
       const selectedLines = lines.slice(editRange.start, editRange.end + 1)
       let content = selectedLines.join('\n')
-      // Auto-beautify HTML tables for readability
       content = beautifyHtmlTables(content)
       setText(content)
     }
-  }, [editRange, lines])
+  }, []) // Only on mount
 
   useEffect(() => {
     if (textareaRef.current) {
