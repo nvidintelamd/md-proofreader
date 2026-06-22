@@ -126,6 +126,8 @@ export function FindReplaceWidget() {
   }
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Don't capture events from input fields (name input, find input, replace input)
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return
     if (e.key === 'Escape') setShowRegexPanel(false)
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleReplace(false) }
     if (e.key === 'Enter' && e.shiftKey) { e.preventDefault(); handleReplace(true) }

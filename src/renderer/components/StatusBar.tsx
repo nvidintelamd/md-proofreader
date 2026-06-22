@@ -67,11 +67,6 @@ export function StatusBar() {
   return (
     <div className="h-6 bg-gray-800 text-gray-300 flex items-center px-4 text-[11px] gap-2 select-none">
       <div className="flex items-center gap-2">
-        <span className="text-gray-500">文件:</span>
-        <span className="text-gray-200">{currentFile?.name || '-'}</span>
-      </div>
-      <div className="h-3 w-px bg-gray-600" />
-      <div className="flex items-center gap-2">
         <span className="text-gray-500">进度:</span>
         <span className="text-gray-200">{progress}</span>
       </div>

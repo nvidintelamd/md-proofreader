@@ -141,9 +141,10 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
       return
     }
 
+    // Normal mode: record mousedown for potential drag
     mouseDownRef.current = { idx, y: e.clientY, started: false }
     state.setCursorLine(idx)
-    state.setEditRange(null)
+    // DON'T clear editRange here — let dblclick set it first
   }, [])
 
   // Drag polling — runs while mouse is held down
