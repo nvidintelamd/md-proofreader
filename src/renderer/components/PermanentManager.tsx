@@ -176,14 +176,14 @@ export function PermanentManager() {
 
               {/* Preset list */}
               {presets.map(p => (
-                <div key={p.id} className="flex items-center gap-1.5 bg-[#1e1e1e] rounded px-2 py-1.5">
-                  <button onClick={() => addToSortGroup(p.id)} title="添加到排序组"
-                    className="w-5 h-5 flex items-center justify-center rounded bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 text-[10px]">+</button>
-                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => editPreset(p)}>
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-white/30 ml-1 font-mono text-[10px] truncate">{p.pattern}</span>
-                  </div>
-                  <button onClick={() => deletePreset(p.id)} className="text-red-400 hover:text-red-300 px-1">×</button>
+                <div key={p.id}
+                  onClick={() => addToSortGroup(p.id)}
+                  className="flex items-center gap-1.5 bg-[#1e1e1e] rounded px-2 py-1.5 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
+                >
+                  <span className="font-medium">{p.name}</span>
+                  <span className="text-white/30 ml-1 font-mono text-[10px] truncate flex-1">{p.pattern}</span>
+                  <button onClick={(e) => { e.stopPropagation(); deletePreset(p.id) }}
+                    className="text-red-400 hover:text-red-300 px-1">×</button>
                 </div>
               ))}
             </div>
@@ -202,17 +202,24 @@ export function PermanentManager() {
                     const p = presets.find(pr => pr.id === sid)
                     if (!p) return null
                     return (
-                      <div key={sid} className="flex items-center gap-1.5 bg-[#1e1e1e] rounded px-2 py-1.5">
-                        <div className="flex flex-col">
-                          <button onClick={() => moveSortItem(idx, idx - 1)} disabled={idx === 0}
-                            className="text-[8px] text-white/30 hover:text-white disabled:opacity-30">▲</button>
-                          <button onClick={() => moveSortItem(idx, idx + 1)} disabled={idx === sortGroup.length - 1}
-                            className="text-[8px] text-white/30 hover:text-white disabled:opacity-30">▼</button>
-                        </div>
+                      <div key={sid}
+                        draggable
+                        onDragStart={() => { dragIdx.current = idx }}
+                        onDragOver={(e) => { e.preventDefault() }}
+                        onDrop={() => {
+                          if (dragIdx.current !== null && dragIdx.current !== idx) {
+                            moveSortItem(dragIdx.current, idx)
+                          }
+                          dragIdx.current = null
+                        }}
+                        onContextMenu={(e) => { e.preventDefault(); removeFromSortGroup(sid) }}
+                        className="flex items-center gap-1.5 bg-[#1e1e1e] rounded px-2 py-1.5 cursor-move hover:bg-[#2a2a2a] transition-colors"
+                        title="右键删除 | 拖拽排序"
+                      >
+                        <span className="text-white/30 text-[10px]">☰</span>
                         <span className="text-white/40 text-[10px] w-4">{idx + 1}</span>
                         <span className="font-medium flex-1">{p.name}</span>
                         <span className="text-white/30 font-mono text-[10px] truncate max-w-[100px]">{p.pattern}</span>
-                        <button onClick={() => removeFromSortGroup(sid)} className="text-red-400 hover:text-red-300 px-1">×</button>
                       </div>
                     )
                   })}
@@ -228,7 +235,7 @@ export function PermanentManager() {
                   </div>
                 </div>
               ) : (
-                <div className="text-white/30 text-[10px] text-center py-4">点击左侧规则的 + 号添加到排序组</div>
+                <div className="text-white/30 text-[10px] text-center py-4">点击左侧规则添加到排序组</div>
               )}
 
               {/* Saved groups */}
