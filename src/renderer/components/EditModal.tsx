@@ -12,7 +12,6 @@ export function EditModal({ onSave, onCancel }: Props) {
   const surroundPresets = useAppStore(s => s.surroundPresets)
   const [text, setText] = useState('')
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const initializedRef = useRef(false)
 
   // Surround manager state
   const [sp, setSp] = useState('')
@@ -20,10 +19,8 @@ export function EditModal({ onSave, onCancel }: Props) {
   const [editingSurroundId, setEditingSurroundId] = useState<string | null>(null)
   const [showSurroundManager, setShowSurroundManager] = useState(false)
 
-  // Initialize text from store (read directly, not subscribe)
+  // Initialize and focus on every mount
   useEffect(() => {
-    if (initializedRef.current) return
-    initializedRef.current = true
     const { lines, editRange } = useAppStore.getState()
     if (editRange) {
       const selectedLines = lines.slice(editRange.start, editRange.end + 1)
@@ -31,7 +28,20 @@ export function EditModal({ onSave, onCancel }: Props) {
       content = beautifyHtmlTables(content)
       setText(content)
     }
-    setTimeout(() => textareaRef.current?.focus(), 50)
+    const focus = () => {
+      if (textareaRef.current) {
+        textareaRef.current.focus()
+        // Block ALL keyboard events from reaching global handlers while editing
+        const blockGlobal = (e: KeyboardEvent) => {
+          e.stopImmediatePropagation()
+        }
+        textareaRef.current.addEventListener('keydown', blockGlobal, true)
+        return () => textareaRef.current?.removeEventListener('keydown', blockGlobal, true)
+      }
+      requestAnimationFrame(focus)
+    }
+    const cleanup = focus()
+    return cleanup
   }, [])
 
   const handleSave = () => {
@@ -243,8 +253,11 @@ export function EditModal({ onSave, onCancel }: Props) {
           <textarea
             ref={textareaRef}
             value={text}
+            autoFocus
+            tabIndex={0}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={(e) => {
+              e.stopPropagation()
               handleKeyDown(e)
               handleBackspace(e)
             }}
