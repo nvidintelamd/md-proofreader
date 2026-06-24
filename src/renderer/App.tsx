@@ -116,6 +116,9 @@ export default function App() {
           onClick={() => setOpenMenu(openMenu === '编辑' ? null : '编辑')}
           onMouseEnter={() => { if (openMenu) setOpenMenu('编辑') }}
         >
+          <MenuItem label="查找替换" shortcut="Ctrl+F" onClick={() => { useAppStore.getState().setShowRegexPanel(true); setOpenMenu(null) }} />
+          <MenuItem label="正则管理器" shortcut="" onClick={() => { useAppStore.getState().setShowPermManager(true); setOpenMenu(null) }} />
+          <div className="border-t border-white/10 my-1" />
           <MenuItem label="撤销" shortcut="Ctrl+Z" onClick={() => document.execCommand('undo')} />
           <MenuItem label="重做" shortcut="Ctrl+Y" onClick={() => document.execCommand('redo')} />
         </MenuBarItem>

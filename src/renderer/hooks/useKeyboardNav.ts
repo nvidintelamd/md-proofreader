@@ -102,6 +102,13 @@ function handleNormalMode(e: KeyboardEvent) {
   const state = useAppStore.getState()
   const { cursorLine, lines, editRange, setCursorLine, setMode, setEditRange } = state
 
+  // Ctrl+F: open find/replace
+  if (e.ctrlKey && e.key === 'f') {
+    e.preventDefault()
+    useAppStore.getState().setShowRegexPanel(true)
+    return
+  }
+
   // Ctrl+Z: undo
   if (e.ctrlKey && e.key === 'z') {
     e.preventDefault()

@@ -93,11 +93,6 @@ export function StatusBar() {
         className="px-1.5 py-0.5 rounded bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 text-[10px] font-medium border border-emerald-500/30"
         title="将 HTML 表格转换为 MD 表格（仅限简单表格）">表转MD</button>
 
-      {/* Permanent manager button */}
-      <button onClick={() => useAppStore.getState().setShowPermManager(true)}
-        className="px-1.5 py-0.5 rounded bg-amber-700/50 hover:bg-amber-600/50 text-amber-300 text-[10px] font-medium border border-amber-500/30"
-        title="永久化正则管理器">永久化</button>
-
       {/* Regex preset buttons — distinct color */}
       {regexPresets.map(p => (
         <button
