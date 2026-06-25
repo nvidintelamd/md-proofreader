@@ -31,17 +31,11 @@ export function EditModal({ onSave, onCancel }: Props) {
     const focus = () => {
       if (textareaRef.current) {
         textareaRef.current.focus()
-        // Block ALL keyboard events from reaching global handlers while editing
-        const blockGlobal = (e: KeyboardEvent) => {
-          e.stopImmediatePropagation()
-        }
-        textareaRef.current.addEventListener('keydown', blockGlobal, true)
-        return () => textareaRef.current?.removeEventListener('keydown', blockGlobal, true)
+      } else {
+        requestAnimationFrame(focus)
       }
-      requestAnimationFrame(focus)
     }
-    const cleanup = focus()
-    return cleanup
+    focus()
   }, [])
 
   const handleSave = () => {

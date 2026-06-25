@@ -32,6 +32,15 @@ export function PreviewArea({ onOpenFiles }: { onOpenFiles?: () => void }) {
     }
   }, [lines.length])
 
+  // Scroll cursor line into view when it changes
+  useEffect(() => {
+    if (!containerRef.current) return
+    const el = containerRef.current.querySelector(`[data-line-index="${cursorLine}"]`)
+    if (el) {
+      el.scrollIntoView({ block: 'nearest', behavior: 'auto' })
+    }
+  }, [cursorLine])
+
   const mathBlocks = useMemo(() => {
     const blocks: { start: number; end: number }[] = []
     let mathStart = -1

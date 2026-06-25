@@ -180,6 +180,11 @@ export function PermanentManager() {
                   onClick={() => addToSortGroup(p.id)}
                   className="flex items-center gap-1.5 bg-[#1e1e1e] rounded px-2 py-1.5 cursor-pointer hover:bg-[#2a2a2a] transition-colors"
                 >
+                  <button onClick={(e) => {
+                    e.stopPropagation()
+                    addRegexPreset({ id: p.id, name: p.name, pattern: p.pattern, replacement: p.replacement })
+                  }} title="添加为底栏按钮"
+                    className="w-5 h-5 flex items-center justify-center rounded bg-green-600/30 hover:bg-green-600/50 text-green-300 text-[10px]">+</button>
                   <span className="font-medium">{p.name}</span>
                   <span className="text-white/30 ml-1 font-mono text-[10px] truncate flex-1">{p.pattern}</span>
                   <button onClick={(e) => { e.stopPropagation(); deletePreset(p.id) }}
