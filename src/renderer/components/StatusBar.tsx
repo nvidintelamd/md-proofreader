@@ -93,6 +93,25 @@ export function StatusBar() {
         className="px-1.5 py-0.5 rounded bg-emerald-700/50 hover:bg-emerald-600/50 text-emerald-300 text-[10px] font-medium border border-emerald-500/30"
         title="将 HTML 表格转换为 MD 表格（仅限简单表格）">表转MD</button>
 
+      {/* Remove empty lines button */}
+      <button onClick={() => {
+        const { lines, editRange, pushUndo, setLines, setEditedRange, setCursorLine, setEditRange } = useAppStore.getState()
+        const start = editRange ? editRange.start : 0
+        const end = editRange ? editRange.end : lines.length - 1
+        const selected = lines.slice(start, end + 1)
+        const filtered = selected.filter(l => l.trim() !== '')
+        if (filtered.length === selected.length) return
+        pushUndo({ lines: [...lines], range: { start, end } })
+        const newLines = [...lines]
+        newLines.splice(start, end - start + 1, ...filtered)
+        setLines(newLines)
+        setEditedRange({ start, end: start + filtered.length - 1 })
+        setCursorLine(start)
+        setEditRange(null)
+      }}
+        className="px-1.5 py-0.5 rounded bg-gray-600 hover:bg-gray-500 text-gray-300 text-[10px]"
+        title="清除选区/全文内的空行">删空行</button>
+
       {/* Regex preset buttons — distinct color */}
       {regexPresets.map(p => (
         <button

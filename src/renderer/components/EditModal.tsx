@@ -244,6 +244,61 @@ export function EditModal({ onSave, onCancel }: Props) {
             )}
           </div>
 
+          {/* Permanent action buttons */}
+          <div className="flex flex-wrap gap-1 mt-2 mb-2">
+            <button onClick={() => handleSurround(' $\\mathrm{', '}$ ')}
+              className="px-2 py-0.5 text-[10px] rounded bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300"
+              title="前插 $\\mathrm{ 后插 }$">化学式</button>
+            <button onClick={() => handleSurround(' $', '$ ')}
+              className="px-2 py-0.5 text-[10px] rounded bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300"
+              title="前插 $ 后插 $">行内公式</button>
+            <button onClick={() => handleSurround('**', '**')}
+              className="px-2 py-0.5 text-[10px] rounded bg-blue-100 hover:bg-blue-200 text-blue-800 border border-blue-300"
+              title="前插 ** 后插 **">粗体</button>
+            <button onClick={() => {
+              const textarea = textareaRef.current
+              if (!textarea) return
+              const start = textarea.selectionStart
+              const end = textarea.selectionEnd
+              if (start === end) return
+              const selected = text.substring(start, end)
+              const cleaned = selected.replace(/\$/g, '').replace(/\\mathrm/g, '').replace(/\{/g, '').replace(/\}/g, '')
+              const newText = text.substring(0, start) + cleaned + text.substring(end)
+              setText(newText)
+              setTimeout(() => { textarea.setSelectionRange(start, start + cleaned.length); textarea.focus() }, 0)
+            }}
+              className="px-2 py-0.5 text-[10px] rounded bg-red-100 hover:bg-red-200 text-red-800 border border-red-300"
+              title="删除选中部分内的 $、\\mathrm、{、}">清除符号</button>
+            <button onClick={() => {
+              const textarea = textareaRef.current
+              if (!textarea) return
+              const cursorPos = textarea.selectionStart
+              const beforeCursor = text.slice(0, cursorPos)
+              const lineIdx = beforeCursor.split('\n').length - 1
+              const allLines = text.split('\n')
+              allLines[lineIdx] = '  ' + allLines[lineIdx]
+              const newText = allLines.join('\n')
+              setText(newText)
+              setTimeout(() => { textarea.setSelectionRange(cursorPos + 2, cursorPos + 2); textarea.focus() }, 0)
+            }}
+              className="px-2 py-0.5 text-[10px] rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
+              title="当前行缩进2空格">缩进行</button>
+            <button onClick={() => {
+              const textarea = textareaRef.current
+              if (!textarea) return
+              const start = textarea.selectionStart
+              const end = textarea.selectionEnd
+              const selected = text.substring(start, end)
+              const cleaned = selected.split('\n').filter(l => l.trim() !== '').join('\n')
+              if (cleaned === selected) return
+              const newText = text.substring(0, start) + cleaned + text.substring(end)
+              setText(newText)
+              setTimeout(() => { textarea.setSelectionRange(start, start + cleaned.length); textarea.focus() }, 0)
+            }}
+              className="px-2 py-0.5 text-[10px] rounded bg-gray-100 hover:bg-gray-200 text-gray-800 border border-gray-300"
+              title="清除选中部分的空行">删空行</button>
+          </div>
+
           <textarea
             ref={textareaRef}
             value={text}
