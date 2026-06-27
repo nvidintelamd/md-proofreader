@@ -1,0 +1,141 @@
+{
+  "presets": [
+    {
+      "id": "mqrmdjijclgl0",
+      "name": "# ℃",
+      "pattern": "(?<![{\\$])(\\d{1,4})(?:\\.\\d{1,2})?\\s?(?:°C|℃)",
+      "replacement": "${$1} ^{ \\circ  }\\mathrm{C}$"
+    },
+    {
+      "id": "mqrmdjijp18u3",
+      "name": "# mL",
+      "pattern": "(?<![{\\$])(\\d{1,4})(?:\\.\\d{1,2})?\\s?(?:ml|mL)",
+      "replacement": "${$1} \\mathrm{mL}$"
+    },
+    {
+      "id": "mqrmdjij0pgm6",
+      "name": "# %",
+      "pattern": "(\\d{1,3}(?:\\.\\d{1,2})?)\\s?%",
+      "replacement": "$ $1 \\%$"
+    },
+    {
+      "id": "mqrmdjijp1fp9",
+      "name": "# ABCD选项",
+      "pattern": "(\\S)\\s+([ABCD]\\.\\s?)",
+      "replacement": "$1\\n\\n$2"
+    },
+    {
+      "id": "mqrmdjije3z512",
+      "name": "# 例",
+      "pattern": "^例",
+      "replacement": "---\\n\\n例"
+    },
+    {
+      "id": "mqrmdjijfiue15",
+      "name": "# 变式",
+      "pattern": "^【变",
+      "replacement": "---\\n\\n【变"
+    },
+    {
+      "id": "mqrmdjij011c18",
+      "name": "# pH",
+      "pattern": "(?<![{$])pH(?!(?:table|tr|td)\\b)([><=]?\\s\\d+)?",
+      "replacement": "$\\mathrm{pH} $1$"
+    },
+    {
+      "id": "mqrmdjijcdjt21",
+      "name": "# g",
+      "pattern": "(?<![{\\$])(\\d{1,4}\\.?\\d{1,2}?)\\s?g",
+      "replacement": "${$1} \\mathrm{g}$"
+    },
+    {
+      "id": "mqrmdjij8qu724",
+      "name": "# ①②③④⑤⑥ 缩进",
+      "pattern": "^([①②③④⑤⑥])",
+      "replacement": "- $1"
+    },
+    {
+      "id": "mqrmdjijn42127",
+      "name": "# 1.2.3.加粗",
+      "pattern": "^(\\d\\.)\\s?(.*?)(?=[：:]|[(（]|$)",
+      "replacement": "$1 **$2**"
+    },
+    {
+      "id": "mqrmdjijab5w30",
+      "name": "# (1)(2)(3) 缩进加粗",
+      "pattern": "^(\\(\\d\\))\\s?(.*?)(?=[：:]|[(（]|$)",
+      "replacement": "- $1 **$2**"
+    },
+    {
+      "id": "mqrmdjijujtr33",
+      "name": "# 下标",
+      "pattern": "\\s?\\$\\{\\}\\_\\{\\s?(\\d)\\s?}\\$",
+      "replacement": "_$1"
+    },
+    {
+      "id": "mqrmdjij82v136",
+      "name": "# 上标",
+      "pattern": "\\s?\\$\\{\\}\\^\\{\\s?(\\d?[-+])\\s?\\}\\$",
+      "replacement": "^$1"
+    },
+    {
+      "id": "mqrmdjijafh639",
+      "name": "# H+或OH-",
+      "pattern": "(?<![\\{$]\\s?)(OH\\^[-]|H\\^[+])",
+      "replacement": "$\\mathrm{$1}$"
+    },
+    {
+      "id": "mqrmdjijpu9v42",
+      "name": "# 知识点",
+      "pattern": "^([123456])\\.\\s\\*\\*",
+      "replacement": "**知识点$1、"
+    },
+    {
+      "id": "mqt04xmizyii",
+      "name": "缩进",
+      "pattern": "^",
+      "replacement": "  "
+    },
+    {
+      "id": "mqt97gsm6x9z",
+      "name": "空行",
+      "pattern": "^",
+      "replacement": "\\n"
+    },
+    {
+      "id": "mqur8s93u7l0",
+      "name": "缩进",
+      "pattern": "^",
+      "replacement": "  "
+    }
+  ],
+  "groups": [
+    {
+      "id": "mqrmfu3ugvrr",
+      "name": "化学",
+      "presetIds": [
+        "mqrmdjijn42127",
+        "mqrmdjijpu9v42",
+        "mqrmdjije3z512",
+        "mqrmdjijfiue15",
+        "mqrmdjijp1fp9",
+        "mqrmdjijujtr33",
+        "mqrmdjij82v136",
+        "mqrmdjij011c18",
+        "mqrmdjijcdjt21",
+        "mqrmdjij0pgm6",
+        "mqrmdjijp18u3",
+        "mqrmdjijclgl0"
+      ]
+    },
+    {
+      "id": "mqt9689np3m6",
+      "name": "ABC",
+      "presetIds": [
+        "mqrmdjijp1fp9",
+        "mqrmdjijfiue15",
+        "mqrmdjije3z512"
+      ]
+    }
+  ]
+}
